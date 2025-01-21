@@ -240,6 +240,7 @@ impl SingleCellData{
         }
     }
 
+
     pub fn write (&mut self, file_path: PathBuf, genes:&IndexedGenes, min_count:usize) -> Result< (), &str>{
 
         let names = genes.get_all_gene_names();

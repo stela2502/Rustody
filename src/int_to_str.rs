@@ -399,16 +399,16 @@ impl IntToStr {
     }
 
 
-	pub fn encode_binary( &self, c: u8) -> Base {
+	pub fn encode_binary( &self, c: u8) -> Result<Base, String> {
     	// might have to play some tricks for lookup in a const
     	// array at some point
     	match c {
-        	b'A' | b'a' => A,
-        	b'C' | b'c' => C,
-	        b'G' | b'g' => G,
-        	b'T' | b't' => T,
-        	b'N' | b'n' => A, // this is necessary as we can not even load a N containing sequence
-	        _ => panic!("cannot decode {c} into 2 bit encoding"),
+        	b'A' | b'a' => Ok(A),
+        	b'C' | b'c' => Ok(C),
+	        b'G' | b'g' => Ok(G),
+        	b'T' | b't' => Ok(T),
+        	b'N' | b'n' => Ok(A), // this is necessary as we can not even load a N containing sequence
+	        _ => Err("cannot encode {c} into 2 bit encoding".to_string()),
     	}
 	}
 
@@ -449,23 +449,23 @@ impl IntToStr {
 
 
 	/// regenerates the complete object with a new Vec::<u8> utf8 encoded
-	pub fn from_vec_u8( &mut self, array:Vec::<u8> ) {
+	pub fn from_vec_u8( &mut self, array:Vec::<u8> )-> Result<(),String> {
 		// 4 of the array u8 fit into one result u8
 		self.storage = array.to_vec();
 		self.long_term_storage = array.to_vec();
 		self.current_position=0;
-		self.regenerate();
+		self.regenerate()
 	}
 
 	/// regenerate from the long_term_storage
-	pub fn deep_refresh(&mut self ){
+	pub fn deep_refresh(&mut self )-> Result<(),String>{
 		self.storage = self.long_term_storage.to_vec();
-		self.regenerate();
+		self.regenerate()
 	}
 
 	/// regenerate the encoded from the storage
 	/// this can be used to re-gain lost sequences
-	pub fn regenerate (&mut self ){
+	pub fn regenerate (&mut self ) -> Result<(),String>{
 
 		let mut target = self.storage.len();
 		let remainder = target % 4;
@@ -485,11 +485,11 @@ impl IntToStr {
 				current_byte_id = id*4 + add;
 				if self.storage.len()> current_byte_id {
 					//println!("Trying to push to result {id} / {add} the entry {current_byte_id} ({})",self.storage[current_byte_id] );
-					ret[id] |= self.encode_binary(self.storage[current_byte_id]);
+					ret[id] |= self.encode_binary(self.storage[current_byte_id])?;
 				}
 				else {
 					//println!("Pushing an A instead");
-					ret[id] |= self.encode_binary(b'A');
+					ret[id] |= self.encode_binary(b'A')?;
 				}
 			}
 		}
@@ -498,6 +498,7 @@ impl IntToStr {
 		self.u8_encoded = ret;
 		self.lost = 0;
 		self.shifted = 0;
+		Ok(())
 	}
 
 	/// <unsigned_int>_to_str functions do exactly that.
