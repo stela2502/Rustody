@@ -14,7 +14,7 @@ mod tests {
 
    #[test]
     fn test_seq_at_position() {
-      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32).unwrap();
       if let Some( ( cellid, second_seq) ) = tool.seq_at_position(0){
          let seq_u16 = tool.u64_to_string( 8, &(cellid as u64));
          //println!("The sequenc I got: {cellid:b} should be ATGACTCT");
@@ -28,7 +28,7 @@ mod tests {
 
    #[test]
     fn test_seq_at_position_smaller_u64() {
-      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGA".to_vec(), 32);
+      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGA".to_vec(), 32).unwrap();
       if let Some( ( cellid, second_seq) ) = tool.seq_at_position(0){
          let seq_u16 = tool.u64_to_string( 8, &(cellid as u64));
          //println!("The sequenc I got: {cellid:b} should be ATGACTCT");
@@ -42,7 +42,7 @@ mod tests {
 
    #[test]
     fn test_seq_at_position_start_3() {
-      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32).unwrap();
       if let Some( ( cellid, second_seq) ) = tool.seq_at_position(3){
          let seq_u16 = tool.u64_to_string( 8, &(cellid as u64));
          //println!("The sequenc I got: {cellid:b} should be ATGACTCT");
@@ -56,7 +56,7 @@ mod tests {
 
    #[test]
     fn test_seq_at_position_out_of_range() {
-      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+      let tool = IntToStr::new(b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32).unwrap();
       match tool.seq_at_position(70){
          Some( ( cellid, second_seq) ) => panic!("expected None for an out of range id! And got {cellid} and {second_seq}"),
          None => assert!(true),
@@ -66,7 +66,7 @@ mod tests {
     #[test]
     fn test_u64_to_str(){
 
-        let tool = IntToStr::new( b"CGATATT".to_vec(), 32);
+        let tool = IntToStr::new( b"CGATATT".to_vec(), 32).unwrap();
 
         let num:u64 = tool.into_u64();
         println!("I have this number for the sting 'CGATATT' {num}");
@@ -88,7 +88,7 @@ mod tests {
      let seq = b"AGGC";
      //         C G G A
      //         01101000
-     let tool = IntToStr::new( seq.to_vec() , 32);
+     let tool = IntToStr::new( seq.to_vec() , 32).unwrap();
 
      assert_eq!( tool.len(),  1 ); 
      //panic!("{:b}", binary[0] );
@@ -107,7 +107,7 @@ mod tests {
     fn check_conversion_15bp() {
         //          0000111122223333   
      let seq = b"AGGCTTGATAGCGAG";
-     let tool = IntToStr::new(seq.to_vec(),32);
+     let tool = IntToStr::new(seq.to_vec(),32).unwrap();
 
      assert_eq!( tool.len(),  4 );
 
@@ -130,7 +130,7 @@ mod tests {
     fn check_conversion_1bp() {
 
      let seq = b"C";
-     let tool = IntToStr::new( seq.to_vec(), 10 );
+     let tool = IntToStr::new( seq.to_vec(), 10 ).unwrap();
 
      assert_eq!( tool.len(),  1 ); 
      //                                                A G C A
@@ -148,7 +148,7 @@ mod tests {
     fn check_conversion_one_a() {
 
      let seq = b"A";
-     let tool = IntToStr::new(seq.to_vec(), 32);
+     let tool = IntToStr::new(seq.to_vec(), 32).unwrap();
 
      assert_eq!( tool.len(),  1 ); 
      //                                                A G C A
@@ -167,7 +167,7 @@ mod tests {
     fn check_conversion_4_from_15bp() {
      //          ----    ----
      let seq = b"AGGCCTGTATGA";
-     let tool = IntToStr::new( seq.to_vec(), 10);
+     let tool = IntToStr::new( seq.to_vec(), 10).unwrap();
 
      assert_eq!( tool.len(),  3 ); 
 
@@ -188,7 +188,7 @@ mod tests {
     fn check_longer_string() {
 
      let seq = b"CTGGAAGCGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTC";
-     let tool = IntToStr::new(seq.to_vec(), 32);
+     let tool = IntToStr::new(seq.to_vec(), 32).unwrap();
 
      assert_eq!( tool.len(), 12 ); 
 
@@ -215,7 +215,7 @@ mod tests {
 
      let seq = b"CTGGAAAAGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTT";
      //let seq = b"CTGG";
-     let mut tool = IntToStr::new(seq.to_vec(), 8);
+     let mut tool = IntToStr::new(seq.to_vec(), 8).unwrap();
      tool.print();
 
      let two_bp = tool.into_u64_nbp( 2 );
@@ -328,7 +328,7 @@ mod tests {
     #[test]
     fn check_mask_u64() {
        let seq1_u64 = 14104719131550637795_u64;
-       let tool = IntToStr::new(b"TAGTGTCCTGTGACTTCACCTCAAGTTGTAAT".to_vec(), 8);
+       let tool = IntToStr::new(b"TAGTGTCCTGTGACTTCACCTCAAGTTGTAAT".to_vec(), 8).unwrap();
        assert_eq!( seq1_u64, tool.into_u64(), "correct u64" );
 
        let masked = tool.mask_u64( &seq1_u64 );
@@ -344,7 +344,7 @@ mod tests {
    #[test]
     fn check_next() {
       let mut tool = IntToStr::new(
-         b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32);
+         b"ATGACTCTCAGCATGGAAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACTACCTCTGGGCCTGGGATAC".to_vec(), 32).unwrap();
 //          TGACTCTC       AAGGACAGCAGAGACCAAGAGATCCTCCCACAGGGACACT
       let mut first = "".to_string();
       let mut second = "".to_string();
@@ -460,7 +460,7 @@ mod tests {
    #[test]
    fn test_antibody_tag(){
       let mut tool = IntToStr::new(
-         b"CGAGAATTCCGATGCGCGTGTTAAGTATATAGGTTG".to_vec(), 32);
+         b"CGAGAATTCCGATGCGCGTGTTAAGTATATAGGTTG".to_vec(), 32).unwrap();
       let mut first = "".to_string();
       let mut second = "".to_string();
       let mut i = 0;

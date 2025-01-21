@@ -16,7 +16,7 @@ struct Opts {
 fn main() {
     let opts: Opts = Opts::parse();
 
-    let tool = IntToStr::new( b"".to_vec(), 32 );
+    let tool = IntToStr::new( b"".to_vec(), 32 ).unwrap();
 
     let mut seq = "".to_string();
 

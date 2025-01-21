@@ -374,7 +374,7 @@ impl Analysis{
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
 
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32).unwrap();
 
         // lets tag this with the first gene I was interested in: Cd3e
         //let goi_id = self.genes.get_id("ADA".to_string());
@@ -709,7 +709,7 @@ impl Analysis{
         // for now, we're assuming FASTQ and not FASTA.
         let mut readereads = parse_fastx_file(&f1).expect("valid path/file");
         let mut readefile = parse_fastx_file(&f2).expect("valid path/file");
-        let mut tool = IntToStr::new(b"AAGGCCTT".to_vec(), 32);
+        let mut tool = IntToStr::new(b"AAGGCCTT".to_vec(), 32).unwrap();
         let m = MultiProgress::new();
         let pb = m.add(ProgressBar::new(5000));
         pb.set_style(spinner_style);

@@ -415,7 +415,7 @@ fn sample_split( opts: &Opts){
     ];
 
     let mut missing:u32 = 0;
-    let tool = IntToStr::new( b"AAAAAAAAAAA".to_vec(), 9);
+    let tool = IntToStr::new( b"AAAAAAAAAAA".to_vec(), 9).unwrap();
 
     while let Some(record2) = readefile.next() {
         if let Some(record1) = readereads.next() {

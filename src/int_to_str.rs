@@ -83,7 +83,7 @@ impl Iterator for IntToStr {
 /// I possibly learn a better way to have them...
 impl IntToStr {
 
-	pub fn new(seq:Vec::<u8>, kmer_size:usize) -> Self{
+	pub fn new(seq:Vec::<u8>, kmer_size:usize) -> Result<Self, String>{
 		// 4 of the array u8 fit into one result u8
 		//eprintln!("Somtimes I die?! -> processed seq: {:?}", seq);
 		let storage:Vec::<u8> = seq.to_vec();
@@ -113,8 +113,8 @@ impl IntToStr {
 			step_size:1,
 		};
 
-		ret.regenerate();
-		ret
+		ret.regenerate()?;
+		Ok(ret)
 	}
 
 	pub fn step_size( &mut self, size:usize ) {

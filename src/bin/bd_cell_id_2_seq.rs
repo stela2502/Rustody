@@ -22,7 +22,7 @@ fn main() {
 	let mut info = "The sequence is:\n".to_string();
 
 	let mut s = String::from("");
-	let tool = IntToStr::new( b"AAAAAAAAA".to_vec(), 9 );
+	let tool = IntToStr::new( b"AAAAAAAAA".to_vec(), 9 ).unwrap();
 	tool.u64_to_str(9, &seq[0], &mut s);
 	info += &(s.clone() +"---");
 	//info += &s.clone();

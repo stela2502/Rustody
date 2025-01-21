@@ -104,7 +104,7 @@ impl CellIds10x{
             }
         };
 
-        let mut tool = IntToStr::new(b"AGCT".to_vec(), 16);
+        let mut tool = IntToStr::new(b"AGCT".to_vec(), 16).unwrap();
 
         let mut filepath = PathBuf::new();
         if let Ok(path) = env::var("RustodyFiles") {

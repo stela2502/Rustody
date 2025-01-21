@@ -105,7 +105,7 @@ impl FastMapper{
         let last_count = 0;
         let with_data = 0;
         let spacer = 3;
-        let tool = IntToStr::new(b"".to_vec(), kmer_len );
+        let tool = IntToStr::new(b"".to_vec(), kmer_len ).unwrap();
         // this mask will nerver mask ALL bits.
         // But that would also be an error in this whole approach!
         let size = match kmer_len <= 31{
@@ -514,7 +514,7 @@ impl FastMapper{
 
         let mut short = String::from("");
         let mut long = String::from("");
-        let tool = IntToStr::new(b"AAAAA".to_vec(), 32);
+        let tool = IntToStr::new(b"AAAAA".to_vec(), 32).unwrap();
 
         self.tool.from_vec_u8( seq.to_vec() );
         for entries in self.tool.by_ref(){

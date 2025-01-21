@@ -13,7 +13,7 @@ mod tests {
     		b"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
     	);
 
-    	let tool = IntToStr::new(b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG".to_vec(), 32);
+    	let tool = IntToStr::new(b"AAGAGTCGACTGCCATGTCCCCTCCGCGGGTCCGTGCCCCCCAAG".to_vec(), 32).unwrap();
     	assert_eq!( obj.to_u32(), tool.into_u32(),"I got what I expected {:b}, {:b}", obj.to_u32() ,tool.into_u32() );
 
     	assert_eq!( obj.to_u16(), tool.into_u16(),"I got what I expected {:b}, {:b}", obj.to_u16() ,tool.into_u16() );

@@ -291,7 +291,10 @@ impl AnalysisTE{
         let mut gex = SingleCellData::new( self.num_threads );
         let mut ok : bool;
 
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        let mut tool = match IntToStr::new( b"AAGGCCTT".to_vec(), 32){
+        	Ok(obj) => obj,
+        	Err(_) => unreachable!()
+        };
 
         // lets tag this with the first gene I was interested in: Cd3e
         //let goi_id = self.expr_index_obj.get_id("ADA".to_string());

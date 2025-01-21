@@ -81,7 +81,7 @@ fn main() {
         println!("Setting the mapper highest_humming_val to {highest_humming_val}")
     }
     
-    let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+    let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32).unwrap();
 
     if let Some(i) = &opts.index {
     	println!("Loading index from path {i}");

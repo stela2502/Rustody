@@ -30,7 +30,7 @@ mod tests {
             mapper.add( &seq.to_vec(), &format!("Sample{id}"), &format!("Sample{id}"),EMPTY_VEC.clone() );
             id +=1;
         }
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27);
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 27).unwrap();
 
         let expected_results = (0..12).map(|i| vec![i]).collect::<Vec<_>>();
 
@@ -75,7 +75,7 @@ mod tests {
         let classes2 = vec![ "Ulk1".to_string(), "famA".to_string(), "clusterA".to_string(), "regionA".to_string()];
         mapper.add( &seq.to_vec(), "Ulk.1.1", "Ulk1", classes2 );
         
-        let mut tool = IntToStr::new(seq.to_vec(), 32);
+        let mut tool = IntToStr::new(seq.to_vec(), 32).unwrap();
         if let Some((first, second)) = tool.next(){
             let mapper_obj = &mapper.mapper[ first as usize ];
             let matched = mapper_obj.get( &second );
@@ -126,7 +126,7 @@ mod tests {
 
         mapper.merge( mapper2 );
 
-        let mut tool = IntToStr::new(seq.to_vec(), 32);
+        let mut tool = IntToStr::new(seq.to_vec(), 32).unwrap();
         if let Some((first, second)) = tool.next(){
             let mapper_entry = &mapper.mapper[ first as usize ];
             let (name_entry, _nw_value) = match mapper_entry.get( &second ) {
@@ -153,7 +153,7 @@ mod tests {
         let mut mapper = FastMapper::new( 32, 10, 0 );
 
         let mut geneid = 0;
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32).unwrap();
 
 
 
@@ -198,7 +198,7 @@ mod tests {
     #[test]
     fn check_changed_start() {
         let mut mapper = FastMapper::new( 16, 10, 0 );
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32).unwrap();
         mapper.change_start_id( 10 );
         assert_eq!( mapper.last_count, 0);
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), 
@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn check_offset() {
         let mut mapper = FastMapper::new( 16, 10, 10 );
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32).unwrap();
         assert_eq!( mapper.last_count, 0);
         mapper.add( &b"CGATTACTTCTGTTCCATCGCCCACACCTTTGAACCCTAGGGCTGGGTTGAACATCTTCTGTCTCCTAGGTCTGC".to_vec(), 
             "Transcript1", "Gene1", EMPTY_VEC.clone() );
@@ -235,7 +235,7 @@ mod tests {
         mapper.debug(Some(true));
         //log_writer:File, min_quality:f32, max_reads:usize, ofile:Ofiles
 
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32).unwrap();
         let mut geneid = 0;
         
         mapper.add( &b"ATCCCATCCTTCATTGTTCGCCTGGAATCCCATCCTTCATTGTTCGCCTGGA".to_vec(), "Transcript1", "Gene1",EMPTY_VEC.clone() );
@@ -305,7 +305,7 @@ mod tests {
         index.add( &seq.to_vec(), "Transcript0", "Gene2", vec!("Transcript0".to_string(), "Family0".to_string(),  "Class0".to_string(), ) );
         index.add( &seq.to_vec(), "Transcript1", "Gene1", vec!( "Transcript1".to_string(), "Family0".to_string(),  "Class0".to_string(), ) );
 
-        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32);
+        let mut tool = IntToStr::new( b"AAGGCCTT".to_vec(), 32).unwrap();
 
         match index.get( seq,  &mut tool ){
             Err(MappingError::MultiMatch) => {

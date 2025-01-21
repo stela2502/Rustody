@@ -632,7 +632,7 @@ impl CellIds{
         let mut ret = Vec::<SecondSeq>::with_capacity( seq_a.len() );
         let mut tool: IntToStr;
         for seq in seq_a {
-            tool = IntToStr::new(seq.to_vec(), 9);
+            tool = IntToStr::new(seq.to_vec(), 9).unwrap();
             ret.push( SecondSeq(tool.into_u64(), 9_u8 ) );
         }
         ret
@@ -643,7 +643,7 @@ impl CellIds{
         let mut ret = Vec::<u64>::with_capacity( seq_a.len() );
         let mut tool: IntToStr;
         for seq in seq_a {
-            tool = IntToStr::new(seq.to_vec(), 9);
+            tool = IntToStr::new(seq.to_vec(), 9).unwrap();
             ret.push( tool.into_u64() );
         }
         ret
@@ -715,11 +715,11 @@ impl CellIds{
         // println!( "creating a u64 for {} bp {} - {}",  c1[1]- c1[0], c1[0], c1[1]);
         // println!( "creating a u64 for {} bp {} - {}",  c2[1]- c2[0], c2[0], c2[1]);
         // println!( "creating a u64 for {} bp {} - {}\n",  c3[1]- c3[0], c3[0], c3[1]);
-        tool = IntToStr::new( r1[(self.c1.0+add)..(self.c1.1+add)].to_vec(), self.c1.1- self.c1.0 );
+        tool = IntToStr::new( r1[(self.c1.0+add)..(self.c1.1+add)].to_vec(), self.c1.1- self.c1.0 ).unwrap();
         let km1 = tool.into_u64();
-        tool = IntToStr::new( r1[(self.c2.0+add)..(self.c2.1+add)].to_vec(), self.c2.1- self.c2.0 );
+        tool = IntToStr::new( r1[(self.c2.0+add)..(self.c2.1+add)].to_vec(), self.c2.1- self.c2.0 ).unwrap();
         let km2 = tool.into_u64();
-        tool = IntToStr::new( r1[(self.c3.0+add)..(self.c3.1+add)].to_vec(), self.c3.1- self.c3.0 );
+        tool = IntToStr::new( r1[(self.c3.0+add)..(self.c3.1+add)].to_vec(), self.c3.1- self.c3.0 ).unwrap();
         let km3 = tool.into_u64();
         (km1, km2, km3)
     }
@@ -730,11 +730,11 @@ impl CellIds{
         // println!( "creating a u64 for {} bp {} - {}",  c1[1]- c1[0], c1[0], c1[1]);
         // println!( "creating a u64 for {} bp {} - {}",  c2[1]- c2[0], c2[0], c2[1]);
         // println!( "creating a u64 for {} bp {} - {}\n",  c3[1]- c3[0], c3[0], c3[1]);
-        tool = IntToStr::new( r1[(self.c1.0+add)..(self.c1.1+add)].to_vec(), self.c1.1- self.c1.0 );
+        tool = IntToStr::new( r1[(self.c1.0+add)..(self.c1.1+add)].to_vec(), self.c1.1- self.c1.0 ).unwrap();
         let km1 = SecondSeq(tool.into_u64(), 9_u8);
-        tool = IntToStr::new( r1[(self.c2.0+add)..(self.c2.1+add)].to_vec(), self.c2.1- self.c2.0 );
+        tool = IntToStr::new( r1[(self.c2.0+add)..(self.c2.1+add)].to_vec(), self.c2.1- self.c2.0 ).unwrap();
         let km2 = SecondSeq(tool.into_u64(), 9_u8);
-        tool = IntToStr::new( r1[(self.c3.0+add)..(self.c3.1+add)].to_vec(), self.c3.1- self.c3.0 );
+        tool = IntToStr::new( r1[(self.c3.0+add)..(self.c3.1+add)].to_vec(), self.c3.1- self.c3.0 ).unwrap();
         let km3 = SecondSeq(tool.into_u64(), 9_u8);
         (km1, km2, km3)
     }

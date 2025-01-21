@@ -16,7 +16,7 @@ struct Opts {
 fn main() {
     let opts: Opts = Opts::parse();
 
-    let tool = IntToStr::new( opts.seq.as_bytes().to_vec(), 32 );
+    let tool = IntToStr::new( opts.seq.as_bytes().to_vec(), 32 ).unwrap();
 
     match opts.out.as_str(){
     	"u8" => tool.print(),

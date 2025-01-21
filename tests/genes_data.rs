@@ -15,7 +15,7 @@ mod tests {
 		let seq = b"AACCTTGGGT";
 		let encoded = GeneData::encode( seq );
 
-		let tool=IntToStr::new( seq.to_vec(), 32);
+		let tool=IntToStr::new( seq.to_vec(), 32).unwrap();
 
 		assert_eq!( encoded, tool.u8_encoded, "encoded as expected {encoded:?}?" );
 
