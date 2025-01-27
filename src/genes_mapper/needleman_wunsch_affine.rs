@@ -1,13 +1,14 @@
 const MATCH_SCORE: i32 = 1;
 const MISMATCH_SCORE: i32 = -2;
-const GAP_OPEN_PENALTY: i32 = -4; // Penalty for opening a gap
-const GAP_EXTENSION_PENALTY: i32 = -3; // Penalty for extending a gap
+const GAP_OPEN_PENALTY: i32 = -5; // Penalty for opening a gap
+const GAP_EXTENSION_PENALTY: i32 = -4; // Penalty for extending a gap
 
 use crate::genes_mapper::cigar::{Cigar, CigarEnum};
 use crate::traits::BinaryMatcher;
 
 use std::fs::File;
 use std::io::{self,Write};
+
 
 pub struct NeedlemanWunschAffine{
 	dp: Vec<Vec<i32>>,
@@ -115,18 +116,24 @@ impl <'a> NeedlemanWunschAffine {
 		            // Calculate match/mismatch score
 		            let match_mismatch_score = if nuc1 == nuc2 { MATCH_SCORE } else { MISMATCH_SCORE };
 
+		            let gap_open_penalty = if match_mismatch_score == MISMATCH_SCORE && read.is_same_streak(i - 1) {
+		            	MATCH_SCORE
+		            }else {
+						GAP_OPEN_PENALTY
+		            };
+
 		            // Compute the maximum score directly
 		            self.dp[i][j] = [
 		            	// Score for diagonal (match/mismatch)
 		                self.dp[i - 1][j - 1] + match_mismatch_score,
 		                // Score for gap in read (insertion in read)
-		                self.dp[i - 1][j] + GAP_OPEN_PENALTY,
+		                self.dp[i - 1][j] + gap_open_penalty,
 		                // Score for gap in database (deletion in read)
-		                self.dp[i][j - 1] + GAP_OPEN_PENALTY, 
+		                self.dp[i][j - 1] + gap_open_penalty, 
 		                // Score for gap extension in read (insertion in read)
-		                (1..=i - 1).map(|k| self.dp[i - k][j] + GAP_OPEN_PENALTY + k as i32 * GAP_EXTENSION_PENALTY).max().unwrap_or(std::i32::MIN),
+		                (1..=i - 1).map(|k| self.dp[i - k][j] + gap_open_penalty + k as i32 * GAP_EXTENSION_PENALTY).max().unwrap_or(std::i32::MIN),
 		                // Score for gap extension in database (deletion in read)
-		                (1..=j - 1).map(|k| self.dp[i][j - k] + GAP_OPEN_PENALTY + k as i32 * GAP_EXTENSION_PENALTY).max().unwrap_or(std::i32::MIN),
+		                (1..=j - 1).map(|k| self.dp[i][j - k] + gap_open_penalty + k as i32 * GAP_EXTENSION_PENALTY).max().unwrap_or(std::i32::MIN),
 		            ].iter().copied().max().unwrap();
 		        } else {
 		            // Panic if unable to retrieve nucleotide sequences
@@ -256,7 +263,7 @@ impl <'a> NeedlemanWunschAffine {
 
 
 	/// This will create the Cigar states vector from the internal matrix.
-	pub fn to_cigar_vec<T>(&mut self, read: &T, database: &T, _humming_cut: f32) -> Vec<CigarEnum> 
+	pub fn to_cigar_vec<T>(&mut self, read: &T, database: &T, humming_cut: f32) -> Vec<CigarEnum> 
 	where
     T: BinaryMatcher {
 
@@ -312,10 +319,15 @@ impl <'a> NeedlemanWunschAffine {
 		    		if self.debug{
 		    			println!("inserted the value {} at position {rev_id}", &cigar[rev_id] );
 		    		}
-		    		println!("Here ({i};{j} I had a max index of {max_index} and a max value of {max_value} and decided on a {}",cigar[rev_id]);
+		    		/*println!("Here ({i};{j} I had a max index of {max_index} and a max value of {max_value} and decided on a {} with read:{:?} and query:{:?}",
+		    			cigar[rev_id], read.get_nucleotide_2bit(i), database.get_nucleotide_2bit(j) );
+		    		println!("This is the the matrix that lead to that:\n\n{}\t{}\n{}\t*{}*",
+		    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
+		    			self.dp[i.saturating_sub(1)][j],self.dp[i][j] );
+		    		*/
 		    		
 		    	}else {
-		    		panic!("I can not decode the df matrix to aCigar state at :{i}; j{j}:\n{}\t{}\n{}\t{}",
+		    		panic!("I can not decode the df matrix to a Cigar state at :{i}; j{j}:\n{}\t{}\n{}\t*{}*",
 		    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
 		    			self.dp[i.saturating_sub(1)][j],self.dp[i][j]
 		    			);
@@ -336,9 +348,13 @@ impl <'a> NeedlemanWunschAffine {
 	    	panic!("We have not filled in all the values here!?!?");
 	    }
 
+		
+
 	    // I need that for the debug:
 	    let mut cig = Cigar::new("");
 	    cig.convert_to_cigar( &cigar );
+	    self.cigar_vec = Some(cigar.to_vec());
+	    println!("For this alignement I got this cigar:\n{}\n{}\n", self.to_string(read, database, humming_cut), cig );
 	    /*#[cfg(debug_assertions)]
 	    if self.debug {
 	    	let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
@@ -346,168 +362,21 @@ impl <'a> NeedlemanWunschAffine {
 	    	println!("The initial alignement:\n{}", self.int_state_to_string( read, database, &cigar ));
 	    }*/
 
-
 	    // The alignement is consitently bad at mapping bp around a Deletion/Insertion.
 	    // It is more likely that bp that would match somewhere in the gap are scattered over the gap,
 	    // even if the bp would 100% match the gap start.
 	    // This functionality fixed that issue.
 
-	    
-	    let mut gap_start: Option<(usize, CigarEnum, usize ) > = None;
-		let mut matching: usize;
-		let mut read_id = read.len();
-		let mut database_id = database.len();
-		let mut i = cigar.len();
+	    // the new setting seams to mainly create DxIx combinations that do not make sense like:
 
-		// Step 1: Skip trailing deletions in the Cigar vector
-		while i > 0 && cigar[i - 1] == CigarEnum::Deletion {
-		    i -= 1;
-		    database_id -=1;
-		}
+		//"cg-TGTCTCTAGCTGCATATGTAGCAGAga-aTGGCCTAGTCGGCCATCAcTGGGAAGAGAGGCCCC--ttGGTCTTGCAAACTTTATATGC"
+		//"tcgTGTCTCTAGCTGCATATGTAGCAGAaga-TGGCCTAGTCGGCCATCAtTGGGAAGAGAGGCCCCtt--GGTCTTGCAAACTTTATATGC"
+		//"XXDMMMMMMMMMMMMMMMMMMMMMMMMMXXDIMMMMMMMMMMMMMMMMMMXMMMMMMMMMMMMMMMMDDIIMMMMMMMMMMMMMMMMMMMMM"
 
-		// Step 2: Process Cigar vector to correct alignments around gaps
-		while i > 0 {
-		    i -= 1;
 
-		    #[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		    println!("We are at cigar position {i}");
+	    cigar =cig.fix_DI_problems( 0, read, database );
 
-		    // this is where I try to match the unmatched bits from the opposit side.
-		    match gap_start {
-		    	// Case when no gap has been started
-		        None => {
-
-		            if cigar[i] == CigarEnum::Deletion || cigar[i] == CigarEnum::Insertion{
-		                matching = 0;
-		                let replace_with = cigar[i];
-		                let mut drop_replaces = 0;
-
-		                // Check nucleotide matches and adjust Cigar vector
-		                while let (Some(_nuc1), Some(_nuc2)) = (read.get_nucleotide_2bit(read_id.saturating_sub(1)), database.get_nucleotide_2bit(database_id.saturating_sub(1) )) {
-
-		                    matching += 1;
-
-		                    // both sequences had a match so we need to change the cigar vector and decrease the read ids:
-		                    read_id = read_id.saturating_sub(1);
-		                    database_id = database_id.saturating_sub(1);
-		                    cigar[i] = CigarEnum::Match;
-
-		                    // sometimes an I is followed by a D or vice versa.
-		                    // Therefore we here check if that is the case.
-		                    i -= 1;
-		                    if cigar[i].opposite(&replace_with) {
-		                    	// if we just replace that we change the alignement length!
-		                    	// actually this is a wrong alignement here: just drop it and check if that works
-
-		                    	cigar.remove(i);
-		                    	i-=1;
-		                    	drop_replaces+=1;
-		                    }
-		                    // make sure we overwrite the old value to make the required move of the deletion / insert
-		                    else if cigar[i] != replace_with{
-		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                    	{
-		                    		cig.convert_to_cigar( &cigar );
-		                    		println!("#1 at position {i}+1 (now looking into {i}) - I will replace the {} with {} here {cig}",  cigar[i], replace_with);
-		                    	}
-								cigar[i] = replace_with;
-								matching= matching.saturating_sub(1);
-
-								#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-								println!("The updated alignement:\n{}\nThe new matching count is {}", 
-									self.int_state_to_string( read, database, &cigar ), matching);
-		                       
-		                    }
-		                    if i == 0 {
-		                        break;
-		                    }
-		                }
-		                if matching > 0 {
-		                	gap_start = Some( (matching, replace_with, drop_replaces) );
-		                	#[cfg( debug_assertions )]
-		                	if self.debug{
-		                		println!("#1 I created a gap_start {gap_start:?}");
-		                	}
-		                }
-		                /*
-		                println!("We decided that this needs to be changed: {gap_start:?}");
-		                cig.convert_to_cigar( &cigar );
-		                println!("Before this change the intermediate cigar looks like that:\n{cig}\nremember we will change {matching} 'not {replace_with}' to '{replace_with}'");
-		                */
-		            }
-		        }
-		        // move the remaining deletion / insert 
-		        Some( (to_shift, replace_with, drop_replaces) ) => {
-		        	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		        	{
-		        		println!("After having fixed the #1 move we still have data to shift:");
-		        		println!("We need to move {} {} elements", to_shift, replace_with);
-		        	}
-		        	// move the replace_with to this position ignoring the Cigar command at this place.
-		        	if cigar[i] != replace_with {
-			        	// at least if it consumed a nucleotiode from both DNA strings
-			            //if cigar[i] == CigarEnum::Match || cigar[i] == CigarEnum::Mismatch {
-			            if to_shift > 0 {
-			            	if cigar[i].opposite(&replace_with) {
-		                    	// if we just replace that we change the alignement length!
-		                    	// actually this is a wrong alignement here: just drop it and check if that works!
-		                    	
-		                    	cigar.remove(i);
-		                    	i-=1;
-		                    	gap_start = Some((to_shift, replace_with, drop_replaces + 1) );
-		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                    	{
-		                    		println!("#2 position: We drop the {i}th entry - a {} as it is the opposite of our search {}", cigar[i], replace_with);
-		                    		println!("The updated alignement: {}", self.int_state_to_string( read, database, &cigar ));
-		                    	}
-		                    }else if cigar[i] != replace_with {
-		                    	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		                    	{
-		                    		cig.convert_to_cigar( &cigar );
-		                    		println!("#2 position {i} - replcaing a {} with {} ({cig})", cigar[i], replace_with);
-		                    		println!("The updated alignement: {}", self.int_state_to_string( read, database, &cigar ));
-		                    	}
-		                    	cigar[i] = replace_with;
-		                    	gap_start = Some((to_shift.saturating_sub(1), replace_with, drop_replaces) );
-		                    	
-		                    	
-		                    }
-		                } else {
-		                    gap_start = None;
-		                }
-		            }else if drop_replaces > 0 {
-		            	cigar[i] = replace_with;
-		                gap_start = Some((to_shift - 1, replace_with, drop_replaces -1 ) );
-		            }
-		        }
-		    };
-
-		    if cigar[i] != CigarEnum::Deletion {
-		    	read_id = read_id.saturating_sub(1);
-		    }
-		    if cigar[i] != CigarEnum::Insertion {
-		    	database_id = database_id.saturating_sub(1);
-		    }
-		}
-
-		match gap_start{
-			Some( (to_shift, replace_with, _drop_replaces) ) => {
-				//This is very unexpected!
-				if to_shift > cigar.len() {
-					//todo: find out why this is even checked here!
-					//eprintln!("{} overshot the start with {} entries {:?}", replace_with, to_shift, self.int_state_to_string( read, database, &cigar ) );
-				}else {
-					for _i in 0..to_shift{
-						cigar.insert(0, replace_with);
-						_=cigar.pop();
-					}
-				}
-			},
-			None => {
-				//nothing to do here - that should be the normal!
-			}
-		};
-
+	    println!("{}", cig.as_alignement( read, database ) );
 
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		{
@@ -518,8 +387,8 @@ impl <'a> NeedlemanWunschAffine {
 		//cig.convert_to_cigar( &cigar );
 		//println!("{cig}\nIs what we have after and before the fix_1d1i_1i1d() call");
 
-		cig.clear();
-		cig.fix_1d1i_1i1d( &mut cigar, None );
+		//cig.clear();
+		//cig.fix_1d1i_1i1d( &mut cigar, None );
 
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		{
@@ -530,6 +399,7 @@ impl <'a> NeedlemanWunschAffine {
 	    //cig.convert_to_cigar( &cigar );
 	    //println!("After fix_1d1i_1i1d() I have:\n{cig}");
 
+	    self.cigar_vec = Some(cigar.clone());
 	    cigar
 	}
 

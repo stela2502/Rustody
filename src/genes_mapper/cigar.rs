@@ -35,6 +35,15 @@ impl CigarEnum{
 			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
 		}
 	}
+	pub fn get_opposite(&self) -> Self {
+		match &self{
+			CigarEnum::Match => CigarEnum::Mismatch,
+			CigarEnum::Mismatch => CigarEnum::Match,
+			CigarEnum::Insertion => CigarEnum::Deletion,
+			CigarEnum::Deletion => CigarEnum::Insertion,
+			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
+		}
+	}
 	pub fn to_id(&self) -> usize{
 		match &self{
 			CigarEnum::Match => 0,
@@ -44,6 +53,15 @@ impl CigarEnum{
 			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
 		}
 	}
+	pub fn to_string(&self) -> String{
+		match &self{
+			CigarEnum::Insertion =>  "I".to_string(),
+	        CigarEnum::Deletion => "D".to_string(),
+	        CigarEnum::Match =>  "M".to_string(),
+	        CigarEnum::Mismatch =>  "X".to_string(),
+	        CigarEnum::Empty => panic!("That can not be convertet"),
+	    }
+	}
 	pub fn from_str(c: &str) -> Option<CigarEnum> {
         match c {
             "I" => Some(CigarEnum::Insertion),
@@ -52,6 +70,19 @@ impl CigarEnum{
             "X" => Some(CigarEnum::Mismatch),
             // Add more cases as needed
             _ => None,
+        }
+    }
+}
+
+// Implementing PartialEq for CigarEnum to allow comparison with a &str
+impl PartialEq<&str> for CigarEnum {
+    fn eq(&self, other: &&str) -> bool {
+        match self {
+            CigarEnum::Insertion => *other == "I",
+            CigarEnum::Deletion => *other == "D",
+            CigarEnum::Match => *other == "M",
+            CigarEnum::Mismatch => *other == "X",
+            CigarEnum::Empty => false,  // We assume an empty variant should never compare to a string
         }
     }
 }
@@ -130,7 +161,7 @@ impl Ord for Cigar {
         // 3. Finally by `cigar` string lexicographically (ascending)
 
         self.mapping_quality().cmp(&other.mapping_quality()) // more is better
-        .then_with( || self.len().cmp(&other.len())) // more is better
+        .then_with( || self.cigar.len().cmp(&other.cigar.len())) // more is better
         .then_with( || other.state_changes.cmp(&self.state_changes)) // less is better
     }
 }
@@ -189,6 +220,63 @@ impl Cigar{
 		return 0;
     }
 
+    fn get_nucleotide_2bit( &self, bit: Option<u8> ) -> String {
+    	match bit {
+			Some(0) => "A".to_string(), //0b00
+			Some(1) => "C".to_string(), // 0b01
+			Some(2) => "G".to_string(), // 0b10
+			Some(3) => "T".to_string(), // 0b11
+			Some(_) => panic!("error in decoding binary nucl!"),
+			None => panic!("error in decoding binary nucl!"),
+		}
+    }
+
+    pub fn as_alignement<T: BinaryMatcher>(&self, read:&T, database:&T) ->String {
+    	let mut cigar = "".to_string();
+    	let mut a = "".to_string();
+    	let mut b = "".to_string();
+    	let mut pos_a = 0;
+    	let mut pos_b = 0;
+
+    	for operation in self.string_to_vec( &self.cigar ) {
+    		cigar += &operation.to_string();
+    		match operation{
+    			CigarEnum::Match => {
+    				let nucl = self.get_nucleotide_2bit( read.get_nucleotide_2bit(pos_a) );
+    				a += &nucl;
+    				b += &nucl;
+    				pos_a +=1;
+    				pos_b +=1;
+    			},
+				CigarEnum::Mismatch => {
+					//"X",
+					let nucl_a = self.get_nucleotide_2bit( read.get_nucleotide_2bit(pos_a) );
+					let nucl_b = self.get_nucleotide_2bit( database.get_nucleotide_2bit(pos_b) );
+    				a += &nucl_a;
+    				b += &nucl_b;
+    				pos_a +=1;
+    				pos_b +=1;
+				},
+				CigarEnum::Insertion => {
+					//"I",
+					let nucl_a = self.get_nucleotide_2bit( read.get_nucleotide_2bit(pos_a) );
+					a += &nucl_a;
+					b += "-";
+					pos_a +=1;
+				},
+				CigarEnum::Deletion => {
+					//"D",
+					let nucl_b = self.get_nucleotide_2bit( database.get_nucleotide_2bit(pos_b) );
+					b += &nucl_b;
+					pos_b +=1;
+					a +="-";
+				},
+				CigarEnum::Empty => panic!("There is an empty cigar entry in your vector!"),
+    		}
+    	}
+    	format!("{}\n{}\n{}\n", a, b , cigar )
+    }
+
     pub fn to_sam_string(&self) -> String{
     	let mut ret = self.cigar.to_string();
 		if ! self.contains[CigarEnum::Deletion.to_id()] {
@@ -209,6 +297,93 @@ impl Cigar{
 		}
 		return ret
     }
+
+    /// The new mapper likes to add DDJJ elements that are basically
+    /// --tt
+    /// tt-- combinations. So to say just mapping errors.
+    /// They need to go!
+    pub fn fix_DI_problems<T>( &mut self, mapping_start: usize, read:&T, database:&T ) -> Vec<CigarEnum>
+    where
+    T: BinaryMatcher{
+    	if ! self.fixed.is_none(){
+ 			self.string_to_vec( &self.cigar );
+    	}
+    	if self.contains[CigarEnum::Insertion.to_id()] && self.contains[CigarEnum::Deletion.to_id()]{
+    		let re_start = Regex::new(r"^(\d+)(\w)").unwrap();
+    		let mut read_position = 0;
+    		let mut database_position = mapping_start;
+    		let mut last_option: Option<(usize,CigarEnum)> = None;
+    		let mut new_cigar = "".to_string();
+    		let mut modified = false;
+    		let mut pos = 0;
+    		while let Some(captures) = re_start.captures(&self.cigar[pos..]) {
+
+	            let length: usize = captures[1].parse().unwrap();  // Length of the current operation
+	            let operation = &captures[2];  // 'D' for deletion or 'I' for insertion
+
+	            println!("fix_DI_problems - processing {}{}", length, operation);
+	            
+	            let this_option = CigarEnum::from_str( operation ).unwrap();
+				pos += captures.get(0).unwrap().end();
+
+	            match this_option {
+	                CigarEnum::Insertion => {
+	                    // Update read position for an Insertion
+	                    read_position += length;
+	                }
+	                CigarEnum::Deletion => {
+	                    // Update database position for a Deletion
+	                    database_position += length;
+	                }
+	                CigarEnum::Match | CigarEnum::Mismatch => {
+	                    // Update both positions for Match or Mismatch
+	                    read_position += length;
+	                    database_position += length;
+	                }
+	                _ => panic!("Unexpected CigarEnum encountered"),
+	            }
+
+	            if CigarEnum::Deletion == this_option || CigarEnum::Insertion == this_option {
+	            	let replace = match last_option {
+	            		Some((size,last)) =>  last.opposite( &this_option ) 
+	            			&& size == length 
+	            			&& (0..length).all(|pos| {
+	            				let a = read.get_nucleotide_2bit(read_position -1 - pos);
+	            				let b = database.get_nucleotide_2bit(database_position -1 - pos);
+	            				println!("Is a {a:?} == b {b:?}");
+								    a == b
+									}
+								),
+	            		None => false,
+	            	};
+	            	if replace {
+	            		modified = true;
+	            		println!("Changed {}",new_cigar);
+	            		new_cigar.truncate(new_cigar.len() - 1);
+	            		new_cigar.push_str( "M" );
+	            		last_option = Some((length, CigarEnum::Match ));
+	            		println!("to {}", new_cigar);
+	            	}else {
+	            		new_cigar.push_str( &format!("{}{}", length, this_option ));
+	            		last_option = Some( (length, this_option ) ); 
+	            	}
+	            }else {
+	            	new_cigar.push_str( &format!("{}{}", length, this_option ) );
+	            	last_option = Some( (length, this_option ) ); 
+	            }
+	        } // while closing
+
+	        if modified {
+	        	self.fixed = Some(CigarEndFix::Na);
+	        	self.restart_from_cigar( &new_cigar );
+	        	println!("The modified Cigar String: {}", self);
+	        }
+
+	    }
+	    self.string_to_vec( &self.cigar )
+	}
+
+
 
     pub fn fix_border_insertion( &mut self, mapping_start: usize, read:&GeneData, database:&GeneData )->usize{
     	
@@ -400,6 +575,8 @@ impl Cigar{
     /// let start = r"^((?:[1-7]M|[1-9][0-9]*[IXD]){4,})";
     /// let end = r"((?:[1-7]M|[1-9][0-9]*[IXD]){4,})$";
     pub fn soft_clip_start_end( &mut self) {
+    	// actually that is a REALLY bad idea!
+    	return;
 
     	if self.state_changes < 6 && self.fixed == None{
     		self.fixed = Some(CigarEndFix::Na);

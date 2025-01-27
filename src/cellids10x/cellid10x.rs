@@ -150,6 +150,29 @@ impl BinaryMatcher for CellId10x {
         ret as f32 / 2.0 / 16.0
     }
 
+    /// checks if the last view nucleotides are all the same.
+    /// This function is used to modify the matching algorithms.
+    /// Relaxing gap penalties if the next 3 nucleotides would all be the same
+    /// It seams as if sequencers have a hard time corretly counting the same nucleotide more than 3 times.
+    /// The function returns true if there is a streak of 4 same nucs ending at the position or
+    /// if the end of the sequence is less than 3 bases away.
+    fn is_same_streak(&self, index: usize) -> bool {
+        // Check the current nucleotide and the previous two nucleotides in the sequence
+        let prev3 = self.get_nucleotide_2bit(index - 3);
+        if let (Some(curr), Some(prev1), Some(prev2), Some(prev3) ) = (
+            self.get_nucleotide_2bit(index),
+            self.get_nucleotide_2bit(index - 1), // previous nucleotide
+            self.get_nucleotide_2bit(index - 2), // two nucleotides before
+            self.get_nucleotide_2bit(index - 3), // three nucleotides before
+        ) {
+            curr == prev1 && curr == prev2 && curr == prev3
+        //} else if prev3.is_none() {
+        //    true
+        } else {
+            false
+        }
+    }
+
     
     /// Almost a needleman_wunsch implementation. It just returns the difference from the expected result
     /// comparing the sequences in there minimal defined length. Similar to the hamming_distance function.

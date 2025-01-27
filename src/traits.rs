@@ -54,14 +54,15 @@ impl fmt::Display for Direction {
 
 
 
-pub trait BinaryMatcher : Sync + std::fmt::Display {
-	fn max3<T: Ord>(a: T, b: T, c: T) -> T;
-	fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8>;
-	fn as_dna_string(&self) -> String ;
-	fn di_nuc_abs_diff( &self, other: &Self  ) -> f32;
-	fn tri_nuc_abs_diff( &self, other: &Self  ) -> f32;
-	fn di_nuc_tab (&self ) -> Vec<i8>;
-	fn tri_nuc_tab (&self ) -> Vec<i8>;
-	fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut Cigar> ) -> f32;
-	fn len(&self) -> usize;
+pub trait BinaryMatcher: Sync + std::fmt::Display {
+    fn as_dna_string(&self) -> String;
+    fn di_nuc_abs_diff(&self, other: &Self) -> f32;
+    fn di_nuc_tab(&self) -> Vec<i8>;
+    fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8>;
+    fn is_same_streak(&self, index: usize) -> bool;
+    fn len(&self) -> usize;
+    fn max3<T: Ord>(a: T, b: T, c: T) -> T;
+    fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut Cigar>) -> f32;
+    fn tri_nuc_abs_diff(&self, other: &Self) -> f32;
+    fn tri_nuc_tab(&self) -> Vec<i8>;
 }
