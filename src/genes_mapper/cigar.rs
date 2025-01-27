@@ -380,6 +380,16 @@ impl Cigar{
 	        }
 
 	    }
+
+	    // next step - D an I's tend to be on the wrong side of gap - creating a ton of extra chnages!
+	    //------------------------------------------XXXXX-------------------------------------------
+	    //GGTGTGACCATGTTCATTATAATCTCAAAGGAGAAAAAAAAACCTT-GTAAAAAAAAGCAAAAACAACAACAAAAAAACAATCTTATTCC
+		//GGTGTGACCATGTTCATTATAATCTCAAAGGAGAAAAAAAAAACCTTGTAAAAAAAAGCAAAAACAACAACAAAAAAACAATCTTATTC-
+		//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMXMXMDMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMI
+
+
+
+	    panic!("You need to fix the next iussue here!")
 	    self.string_to_vec( &self.cigar )
 	}
 
