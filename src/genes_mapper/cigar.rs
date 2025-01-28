@@ -305,9 +305,7 @@ impl Cigar{
     pub fn fix_DI_problems<T>( &mut self, mapping_start: usize, read:&T, database:&T ) -> Vec<CigarEnum>
     where
     T: BinaryMatcher{
-    	if ! self.fixed.is_none(){
- 			self.string_to_vec( &self.cigar );
-    	}
+
     	if self.contains[CigarEnum::Insertion.to_id()] && self.contains[CigarEnum::Deletion.to_id()]{
     		let re_start = Regex::new(r"^(\d+)(\w)").unwrap();
     		let mut read_position = 0;
@@ -321,7 +319,7 @@ impl Cigar{
 	            let length: usize = captures[1].parse().unwrap();  // Length of the current operation
 	            let operation = &captures[2];  // 'D' for deletion or 'I' for insertion
 
-	            println!("fix_DI_problems - processing {}{}", length, operation);
+	            //println!("fix_DI_problems - processing {}{}", length, operation);
 	            
 	            let this_option = CigarEnum::from_str( operation ).unwrap();
 				pos += captures.get(0).unwrap().end();
@@ -350,7 +348,7 @@ impl Cigar{
 	            			&& (0..length).all(|pos| {
 	            				let a = read.get_nucleotide_2bit(read_position -1 - pos);
 	            				let b = database.get_nucleotide_2bit(database_position -1 - pos);
-	            				println!("Is a {a:?} == b {b:?}");
+	            				//println!("Is a {a:?} == b {b:?}");
 								    a == b
 									}
 								),
@@ -358,11 +356,11 @@ impl Cigar{
 	            	};
 	            	if replace {
 	            		modified = true;
-	            		println!("Changed {}",new_cigar);
+	            		//println!("Changed {}",new_cigar);
 	            		new_cigar.truncate(new_cigar.len() - 1);
 	            		new_cigar.push_str( "M" );
 	            		last_option = Some((length, CigarEnum::Match ));
-	            		println!("to {}", new_cigar);
+	            		//println!("to {}", new_cigar);
 	            	}else {
 	            		new_cigar.push_str( &format!("{}{}", length, this_option ));
 	            		last_option = Some( (length, this_option ) ); 
@@ -374,25 +372,75 @@ impl Cigar{
 	        } // while closing
 
 	        if modified {
-	        	self.fixed = Some(CigarEndFix::Na);
 	        	self.restart_from_cigar( &new_cigar );
-	        	println!("The modified Cigar String: {}", self);
+	        	//println!("The modified Cigar String: {}", self);
 	        }
 
 	    }
 
-	    // next step - D an I's tend to be on the wrong side of gap - creating a ton of extra chnages!
+	    // next step - D an I's tend to be on the wrong side of a gap - creating a ton of extra changes!
 	    //------------------------------------------XXXXX-------------------------------------------
 	    //GGTGTGACCATGTTCATTATAATCTCAAAGGAGAAAAAAAAACCTT-GTAAAAAAAAGCAAAAACAACAACAAAAAAACAATCTTATTCC
 		//GGTGTGACCATGTTCATTATAATCTCAAAGGAGAAAAAAAAAACCTTGTAAAAAAAAGCAAAAACAACAACAAAAAAACAATCTTATTC-
 		//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMXMXMDMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMI
+		self.fix_gap_locations( read, database, CigarEnum::Insertion );
+		self.fix_gap_locations( read, database, CigarEnum::Deletion );
 
-
-
-	    panic!("You need to fix the next iussue here!")
 	    self.string_to_vec( &self.cigar )
 	}
 
+	/// This function returns the number of equal bases before the position and therefore
+	/// needs both sequences and the positions to start from on both elements.
+	fn neg_look_ahead<T>( &self, read:&T, database:&T, pos_r: usize, pos_d:usize ) -> usize
+	where
+    T: BinaryMatcher{
+		let mut ret = 0;
+		while  read.get_nucleotide_2bit( pos_r - ret ) ==  database.get_nucleotide_2bit( pos_d - ret ) {
+			ret += 1;
+		}
+		ret
+	}
+
+	fn fix_gap_locations<T>( &mut self, read:&T, database:&T, this_option: CigarEnum )
+	where
+    T: BinaryMatcher{
+    	if self.contains[this_option.to_id()] {
+    		println!("Fixing {} locations in this alignement:\n{}", this_option, self.as_alignement(read, database) );
+    		let pattern = &format!(r"^(\d+){}", this_option);
+    		let re_start = Regex::new( pattern ).unwrap();
+    		let mut cig_vec = self.string_to_vec( &self.cigar );
+    		let mut pos = 0;
+    		let mut changed = false;
+    		while let Some(captures) = re_start.captures(&self.cigar[pos..]) {
+    			let length: usize = captures[1].parse().unwrap();  // Length of the current operation
+	            let operation = &captures[2];  // 'D' for deletion or 'I' for insertion
+
+	            let this_option = CigarEnum::from_str( operation ).unwrap();
+				pos += captures.get(0).unwrap().end();
+				let ( on_read, on_database ) = self.calculate_covered_nucleotides(&self.cigar[0..pos+1] );
+				let changes = match this_option{
+					CigarEnum::Insertion => {
+						self.neg_look_ahead(read, database, on_read -1, on_database )
+					},
+					CigarEnum::Deletion => {
+						self.neg_look_ahead(read, database, on_read, on_database -1 )
+					},
+					_ => 0,
+				};
+				if changes > 0 {
+					(0..changes).map(|shift| {
+						cig_vec[on_read - shift] = CigarEnum::Match;
+					} );
+					cig_vec[on_read - changes - 1] = this_option;
+					changed = true;
+				}
+			}
+			if changed {
+				self.convert_to_cigar( &cig_vec );
+				println!("Fixed {} locations in this alignement:\n{}", this_option, self.as_alignement(read, database) );
+			}
+    	}
+    }
 
 
     pub fn fix_border_insertion( &mut self, mapping_start: usize, read:&GeneData, database:&GeneData )->usize{
@@ -476,7 +524,9 @@ impl Cigar{
 	        	None => { 
 	        		panic!("You try to revert the Cigar String {cigar_string} back to a vector of CigarEnum - but we do not recognize the {operation} as a CigarEnum!")
 	        	},
-	            Some (cig) => cig,
+	            Some (cig) => {
+	            	cig
+	            },
 	        };
 
 	        // Add the operation to the result vector `count` times
@@ -774,6 +824,8 @@ impl Cigar{
 	    mine + inserts//.saturating_sub(deletions)
 	}
 
+	/// converts a CigarEnum vector into a Cigar string and stores that internally.
+	/// This function also updated the contains vector.
 	pub fn convert_to_cigar(&mut self, path: &[CigarEnum] ){
 	    let mut count = 0;
 	    let mut last_direction = None;
