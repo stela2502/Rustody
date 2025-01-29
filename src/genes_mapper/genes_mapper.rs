@@ -316,7 +316,9 @@ impl GenesMapper{
 		match start < 0{
 			true => {
 				let obj_a = match change_end.slice( abs_start, (change_end.len() - abs_start ).min( change_start.len() )){
-					Some(val) => val,
+					Some(val) => {
+						val
+					},
 					None => {
 						eprintln!("GenesMapper::slice_objects - I could not slice change_start start {start} length {} and seq {change_start}", (change_end.len() - abs_start ).min( change_start.len() ));
 						return None
@@ -508,7 +510,7 @@ impl GenesMapper{
 	    for ((gene_id, start), count) in &res_vec {
 
 	    	if let Some(( read, database)) = self.slice_objects( *start, &read_data, &self.genes[*gene_id] ){
-	    		cigar.clear();
+	    		
 	    		if (read.len() as f32) < (read_data.len() as f32 * 0.8) && (read.len() as f32) < (self.genes[*gene_id].len() as f32 * 0.9) {
 	    			// this database match is a little short!
 	    			#[cfg(debug_assertions)]
@@ -532,6 +534,7 @@ impl GenesMapper{
 					cigar.convert_to_cigar( &nwa.cigar_vec() );
 					cigar.clean_up_cigar(&read, &database);
 
+
 					#[cfg(debug_assertions)]
 					if self.debug{
 						println!("##################\n################## And I deem this match interesting\n##################");
@@ -549,6 +552,7 @@ impl GenesMapper{
 
 					cigar.clear();
 				}else {
+					cigar.clear();
 					crappy_mappings = true;
 					if helper.len() > 0 {
 						break

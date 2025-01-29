@@ -279,7 +279,7 @@ mod tests {
      assert_eq!( tool.next(), Some( (7017_u16, SecondSeq(46767_u64, 8)) ) );
    
      tool.deep_refresh();
-     tool.drop_n(1);
+     tool.dropped_n(1);
      tool.print();
      let mut decoded:String = "".to_string();
      tool.to_string( 4, &mut decoded);

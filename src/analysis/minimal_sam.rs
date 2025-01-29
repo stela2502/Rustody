@@ -1,5 +1,6 @@
 
 use crate::genes_mapper::{ GenesMapper, MapperResult, SeqRec };
+use crate::analysis::bam_flag::BamFlag;
 
 #[derive(Debug, Clone)]
 pub struct MinimalSam {
@@ -11,41 +12,32 @@ impl MinimalSam {
 	pub fn new() -> Self{
 		Self{}
 	}
+
 	pub fn to_sam_line (&self, read:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec, index:&GenesMapper ) -> Option<String>{
 
 		let mut read2 = read.clone();
-    	let ( start, cigar_str ) = match gene_id[0].cigar() {
+		let mut bam_flag = BamFlag::default();
+		if gene_id.len() > 1 {
+			bam_flag.set_secondary(true);
+		}
+    	let ( cigar_str, start) = match gene_id[0].cigar() {
     		Some(cigar) => 
     		{
-
-    			let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.cigar );
-    			let (sam_str, (diff_start, clip_from_start, clip_from_end) ) = cigar.to_sam_string();
-
-    			if clip_from_start > 0 {
-    				read2=read2.slice(clip_from_start, read2.len() ).unwrap();
-    			}
-    			if clip_from_end > 0 {
-    				read2=read2.slice(0, read2.len()-clip_from_end ).unwrap();
-    			}
-    			
-    			if mine + gene_id[0].start() > gene_id[0].db_length() {
-    				panic!("Cigar suggest longer match than db_length allows!");
-    			}
-
-    			(0, sam_str)
+    			//let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.cigar );
+    			let (sam_str, start) = cigar.to_sam_string();
+    			(sam_str, start +  gene_id[0].start() )
     		},
     		None=> {
     			panic!("An alignement needs to always have a cigar attached!")
     		},
     	};
 
-
     	let mut record = "".to_string();
     	// starting
     	record += &String::from_utf8_lossy(read2.id());
     	record += "\t";
     	// the ID
-    	record += &format!("{}\t", 0b00000000000);
+    	record += &format!("{}\t", &bam_flag.to_sam() );
     	/*
             0x1 (1): PAIRED - Read is paired in sequencing.
 		    0x2 (2): PROPER_PAIR - Read is mapped in a proper pair.

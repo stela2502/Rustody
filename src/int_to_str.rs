@@ -176,7 +176,7 @@ impl IntToStr {
    			return Ok( (short_seq.0 as u16, SecondSeq( 0_u64, 32_u8)) )
    		}
 
-        match self.drop_n(2){// shift 8 bp
+        match self.dropped_n(2){// shift 8 bp
         	Some(_) => {},
         	None => {
         		return Err(SeqError::End);
@@ -414,7 +414,7 @@ impl IntToStr {
 
 	/// drop the last n u8 2 bit encoded sequences (n=1 => 4bp dropped from encoded)
 	/// this can be reset using the self.reset() function.
-	pub fn drop_n (&mut self, n:usize ) -> Option<()>{
+	pub fn dropped_n (&mut self, n:usize ) -> Option<()>{
 		//let mut  removed:String = "".to_string();
 		//self.print();
 		if self.u8_encoded.len() < 2{
@@ -424,7 +424,7 @@ impl IntToStr {
 			let _a =self.u8_encoded.remove(0);
 			//removed.clear();
 			//self.u8_to_str( 4, &a, &mut removed);
-			//eprintln!("drop_n {i} has dropped {:?}",removed);
+			//eprintln!("dropped_n {i} has dropped {:?}",removed);
 		}
 		self.lost +=n;
 		//self.print();

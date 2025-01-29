@@ -2,6 +2,7 @@
 /// They are not only data containers, but logics containers - if that makes sense.
 
 pub mod minimal_sam;
+pub mod bam_flag;
 pub mod fast_mapper;
 pub mod gene_mapper;
 pub mod genomic_mapper;

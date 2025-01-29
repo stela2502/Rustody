@@ -69,6 +69,7 @@ impl AddAssign for SeqRec {
         self.id.extend_from_slice(&other.id);
         self.seq.extend_from_slice(&other.seq);
         self.qual.extend_from_slice(&other.qual);
+
     }
 }
 
@@ -78,6 +79,7 @@ impl Default for SeqRec {
             id: Vec::new(),
             seq: Vec::new(),
             qual: Vec::new(),
+
         }
     }
 }
@@ -118,6 +120,8 @@ impl SeqRec{
         self.seq.len()
     }
 
+
+
     pub fn slice(&self, start:usize, len:usize) -> Option<Self>{
         
         let real_start = if start > self.len(){
@@ -136,11 +140,13 @@ impl SeqRec{
 
         let end  = real_start + used_len;
 
-        let id = String::from_utf8_lossy(self.id.as_slice()).to_string() + &format!("{}+{}",real_start, used_len);
+        let id = String::from_utf8_lossy(self.id.as_slice()).to_string();//+ &format!("{}+{}",real_start, used_len);
+
     	Some( 
     		Self::new( &id.into_bytes(),
     		 &self.seq[real_start..end],
-    		 &self.qual[real_start..end]
+    		 &self.qual[real_start..end],
+
     		)
     	)
     }

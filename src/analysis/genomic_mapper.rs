@@ -379,6 +379,7 @@ impl AnalysisGenomicMapper{
 		                        ){
 		                        	report.pcr_duplicates += 1 
 		                        }
+		                        
 		                        match minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq, &self.genes ) {
 		                        	Some(sam_line) => bam.push( sam_line ),
 		                        	None => {

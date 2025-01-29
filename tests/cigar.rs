@@ -38,11 +38,11 @@ mod tests {
 		obj.restart_from_cigar("1D15M1I30M");
 		let fixed = obj.to_sam_string();
 
-		assert_eq!( fixed, ("15M1I30M".to_string(),(1_usize,0_usize,0_usize)), "internal insert overhanging D fixed at start");
+		assert_eq!( fixed, ("15M1I30M".to_string(),1 ), "internal insert overhanging D fixed at start");
 		
 		obj.restart_from_cigar("15M1I30M1D");
 		let fixed = obj.to_sam_string();
-		assert_eq!( fixed, ("15M1I30M".to_string(),(0_usize,0_usize,0_usize)), "internal insert overhanging D fixed at end");
+		assert_eq!( fixed, ("15M1I30M".to_string(),0 ), "internal insert overhanging D fixed at end");
 	}
 
 	#[test]
@@ -147,7 +147,7 @@ mod tests {
 		obj1.convert_to_cigar(&vec![CigarEnum::Match; 32]);
 		obj2.convert_to_cigar(&vec![CigarEnum::Match; 36]);
 
-		assert!( obj2.better_as(&obj1), "{obj2} is better than {obj1}" );
+		assert!( obj2.better_as(&obj1), "{obj2} is better than {obj1}? {}",  obj2.better_as(&obj1) );
 
 		obj1.convert_to_cigar( &[CigarEnum::Insertion, CigarEnum::Match, CigarEnum::Match, 
 			CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, 

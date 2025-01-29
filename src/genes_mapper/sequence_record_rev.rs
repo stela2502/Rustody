@@ -115,8 +115,9 @@ impl<'a> SeqRec<'a> {
 
         let end = real_start + used_len;
 
-        let id = format!("{}+{}", String::from_utf8_lossy(self.id), real_start + used_len).into_bytes();
-        Some(Self::new(&id, &self.seq[real_start..end], &self.qual[real_start..end]))
+        //let id = format!("{}+{}", String::from_utf8_lossy(self.id), real_start + used_len).into_bytes();
+        //Some(Self::new(&id, &self.seq[real_start..end], &self.qual[real_start..end]))
+        Some(Self::new( self.id, &self.seq[real_start..end], &self.qual[real_start..end]))
     }
 
     pub fn as_dna_string(&self) -> String {

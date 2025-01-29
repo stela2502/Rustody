@@ -64,6 +64,10 @@ impl BinaryMatcher for CellId10x {
         max(a, max(b, c))
     }
 
+    fn get_dropped_values(&self) -> ( usize, usize){
+        ( 0, 0)
+    }
+
     fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
         if pos > 16 {
             return None; // Position exceeds the length of the encoded sequence

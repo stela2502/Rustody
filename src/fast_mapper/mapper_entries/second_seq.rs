@@ -62,6 +62,11 @@ impl BinaryMatcher for SecondSeq {
     fn max3<T: Ord>(a: T, b: T, c: T) -> T {
         max(a, max(b, c))
     }
+    
+    fn get_dropped_values(&self) -> ( usize, usize){
+        ( 0, 0)
+    }
+
 
     fn as_dna_string(&self) -> String {
         let mut data = String::new();

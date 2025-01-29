@@ -374,7 +374,7 @@ impl <'a> NeedlemanWunschAffine {
 		//"XXDMMMMMMMMMMMMMMMMMMMMMMMMMXXDIMMMMMMMMMMMMMMMMMMXMMMMMMMMMMMMMMMMDDIIMMMMMMMMMMMMMMMMMMMMM"
 
 
-	    cigar =cig.fix_DI_problems( 0, read, database );
+	    cigar =cig.fix_di_problems( 0, read, database );
 
 	    //println!("{}", cig.as_alignement( read, database ) );
 

@@ -125,6 +125,10 @@ pub struct Cigar{
 	contains: Vec<bool>,
 	/// state_changes is a measure of quality for a Cigar - the more changes the less likely that this is real.
 	state_changes: usize,
+	/// keep track of how many bp have been sliced from this entry's start
+	dropped_start:usize,
+	/// keep track of how many bp have been sliced from this entry's end
+	dropped_end:usize,
 
 }
 
@@ -143,7 +147,8 @@ impl Default for Cigar {
             debug: false,
             contains: vec![false;4],
             state_changes: 1000,
-        }
+            dropped_start: 0,
+            dropped_end:0,        }
     }
 }
 
@@ -161,7 +166,7 @@ impl Ord for Cigar {
         // 3. Finally by `cigar` string lexicographically (ascending)
 
         self.mapping_quality().cmp(&other.mapping_quality()) // more is better
-        .then_with( || self.cigar.len().cmp(&other.cigar.len())) // more is better
+        .then_with( || self.len().cmp(&other.len())) // more is better
         .then_with( || other.state_changes.cmp(&self.state_changes)) // less is better
     }
 }
@@ -175,6 +180,8 @@ impl Cigar{
 			debug:false,
 			contains: vec![false;4],
 			state_changes: 0,
+			dropped_start: 0,
+            dropped_end:0,
 		}
 	}
 
@@ -272,66 +279,66 @@ impl Cigar{
     	format!("Cigar String: {}\n{}\n{}\n{}\n{}\n{}",self.cigar, tens, ones, a, b , cigar )
     }
 
-    pub fn to_sam_string(&self) -> (String, (usize, usize, usize)){
+    pub fn to_sam_string(&self) -> (String,  usize ){
     	let mut ret = self.cigar.to_string();
 
-		if ! self.contains[CigarEnum::Deletion.to_id()] {
-			// not necessary to process this!
-			return (ret, (0, 0, 0) )
-		}
-		let re_start = Regex::new(r"^(\d+)D").unwrap();
-		let diff_start = if let Some(mat) =re_start.captures(&ret) {
-			if let Some(clippable) = mat.get(1) {
-				let info = clippable.as_str().to_string();
-				ret.replace_range(0..clippable.end()+1, "");
-				info.as_str().parse().unwrap()
-			}else {
-				0
+		let re_start = Regex::new(r"^(\d+)([ID])").unwrap();
+
+		let move_start = if let Some(mat) =re_start.captures(&ret) {
+			let clippable = mat.get(1).unwrap();
+			let length : usize= mat.get(1).unwrap().as_str().parse().unwrap();
+			let option = mat.get(2).unwrap().as_str();
+			match option{
+				"I" => {
+					// crap - this will be a negative change for the read location!
+					ret.replace_range(clippable.start()..clippable.end()+1, &format!("{}S", length) );
+					0
+				},
+				"D" => {
+					// move the match n bp instead!
+					ret.replace_range(clippable.start()..clippable.end()+1, "" );
+					length
+				},
+				_ => unreachable!()
 			}
 		}else {
 			0
 		};
-		let re_end = Regex::new(r"(\d+D)$").unwrap();
+
+		let re_end = Regex::new(r"(\d+)([DI])$").unwrap();
 		if let Some(mat) =re_end.captures(&ret) {
-			if let Some(clippable) = mat.get(1) {
-				ret.replace_range(clippable.start()..clippable.end(), "")
+			let clippable = mat.get(1).unwrap();
+			let length : i64= mat.get(1).unwrap().as_str().parse().unwrap();
+			let option = mat.get(2).unwrap().as_str();
+
+			match option{
+				"I" => {
+					ret.replace_range(clippable.start()..clippable.end()+1, &format!("{}S", length) );
+				},
+				"D" => {
+					// that can just go.
+					ret.replace_range(clippable.start()..clippable.end()+1, "" );
+				},
+				_ => unreachable!()
 			}
 		}
 
-		let re_start = Regex::new(r"^(\d+)I").unwrap();
-		let clip_front : usize  = if let Some(mat) =re_start.captures(&ret) {
-			if let Some(clippable) = mat.get(1) {
-				let info = clippable.as_str().to_string();
-				ret.replace_range(0..clippable.end()+1, "");
-				info.as_str().parse().unwrap()
-			}else {
-				0
-			}
-		}else {
-			0
-		};
-		let re_end = Regex::new(r"(\d+)I$").unwrap();
+		// and now we need to handle the possibiliity that the mapper has cut parts of our string, too.
+		if self.dropped_start > 0 {
+			ret = format!("{}H{}", self.dropped_start, ret);
+		}
+		if self.dropped_end > 0 {
+			ret += &format!("{}H", self.dropped_end);
+		}
 
-		let clip_back :usize = if let Some(mat) =re_end.captures(&ret) {
-			
-			if let Some(clippable) = mat.get(1) {
-				let info = clippable.as_str().to_string();
-				ret.replace_range(clippable.start()..clippable.end()+1, "");
-				info.as_str().parse().unwrap()
-			}else {
-				0
-			}
-		}else {
-			0
-		};
-		return (ret, (diff_start, clip_front, clip_back) )
+		return (ret, move_start )
     }
 
     /// The new mapper likes to add DDJJ elements that are basically
     /// --tt
     /// tt-- combinations. So to say just mapping errors.
     /// They need to go!
-    pub fn fix_DI_problems<T>( &mut self, mapping_start: usize, read:&T, database:&T ) -> Vec<CigarEnum>
+    pub fn fix_di_problems<T>( &mut self, mapping_start: usize, read:&T, database:&T ) -> Vec<CigarEnum>
     where
     T: BinaryMatcher{
     	if self.contains.iter().all( |&t| t ) && self.state_changes > 20 {
@@ -341,7 +348,7 @@ impl Cigar{
     	//#[cfg(all(debug_assertions, feature = "mapping_debug"))]
     	//{
     		println!("########################\nStarting a new FIX\n########################\n{}",self.as_alignement(read, database));
-    		println!("Fixing fix_DI_problems locations in this alignement:\n{}", self.as_alignement(read, database) );
+    		println!("Fixing fix_di_problems locations in this alignement:\n{}", self.as_alignement(read, database) );
     	//}
     	if self.contains[CigarEnum::Insertion.to_id()] && self.contains[CigarEnum::Deletion.to_id()]{
     		let re_start = Regex::new(r"^(\d+)(\w)").unwrap();
@@ -356,7 +363,7 @@ impl Cigar{
 	            let length: usize = captures[1].parse().unwrap();  // Length of the current operation
 	            let operation = &captures[2];  // 'D' for deletion or 'I' for insertion
 
-	            //println!("fix_DI_problems - processing {}{}", length, operation);
+	            //println!("fix_di_problems - processing {}{}", length, operation);
 	            
 	            let this_option = CigarEnum::from_str( operation ).unwrap();
 				pos += captures.get(0).unwrap().end();
@@ -424,8 +431,8 @@ impl Cigar{
 
 		self.fix_gap_locations( read, database, CigarEnum::Deletion );
 		self.fix_gap_locations( read, database, CigarEnum::Insertion );
-		self.fix_gap_locations( read, database, CigarEnum::Deletion );
-		self.fix_gap_locations( read, database, CigarEnum::Insertion );
+		//self.fix_gap_locations( read, database, CigarEnum::Deletion );
+		//self.fix_gap_locations( read, database, CigarEnum::Insertion );
 		
 		//#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		println!("Fixed DI problems locations in this alignement:\n{}\n{self}", self.as_alignement(read, database) );
@@ -447,21 +454,58 @@ impl Cigar{
 		ret
 	}
 
-	fn fix_gap_locations<T>( &mut self, read:&T, database:&T, this_option: CigarEnum )
+	fn to_cigar_tupel_vec( &self ) -> Vec<(usize, usize, CigarEnum)> {
+
+		let ret = Vec::with_capacity( self.state_changes);
+		let re = Regex::new(r"(\d+)(\w)").unwrap();
+		let mut pos = 0;
+	    // Iterate through matches of the regular expression
+	    for cap in re.captures_iter(&self.cigar) {
+			let count: usize = cap[1].parse().unwrap();
+	        let operation = &cap[2];
+	        let cigar_type = match CigarEnum::from_str(operation) {
+	        	None => { 
+	        		panic!("You try to revert the Cigar String {} back to a vector of CigarEnum - but we do not recognize the {operation} as a CigarEnum!", self.cigar )
+	        	},
+	            Some (cig) => {
+	            	cig
+	            },
+	        };
+	        ret.push( (count, pos, cigar_type));
+	        pos += length;
+	    }
+
+	    ret
+	}
+
+	fn fix_next_gap_location<T>( &mut self, read:&T, database:&T, this_option: CigarEnum )
 	where
     T: BinaryMatcher{
 
     	if self.contains[this_option.to_id()] {
     		//println!("Fixing {} locations in this alignement:\n{}", this_option, self.as_alignement(read, database) );
+    		let mut pos = self.len();
+    		let mut cigar_vec = self.to_vec();
+
+    		for ( length, option ) self.to_cigar_tupel_vec().rev() {
+    			if ! this_option == option{
+    				continue;
+    			}
+    			let ( on_read, on_database ) = self.calculate_covered_nucleotides(&self.cigar[0..pos] );
+    			let changes = self.neg_look_ahead(read, database, on_read -1, on_database -1 );
+
+
+    			pos -= length;
+    		}
     		let pattern = &format!(r"(\d+){}", this_option);
     		println!("##################\nI am searching for the pattern {:?}", pattern);
     		let re_start = Regex::new( pattern ).unwrap();
     		let mut cig_vec = self.string_to_vec( &self.cigar );
     		let mut pos = 0;
     		let mut changed = false;
-    		let mut deletion_rem;
+    		let mut deletion_rem: usize;
     		while let Some(captures) = re_start.captures(&self.cigar[pos..]) {
-    			let length: usize = captures[1].parse().unwrap();  // Length of the current operation
+    			let mut length: usize = captures[1].parse().unwrap();  // Length of the current operation
 				pos += captures.get(0).unwrap().end();
 				if pos == self.cigar.len(){
 					return;
@@ -478,57 +522,47 @@ impl Cigar{
 					this_option, on_read, on_database, changes, self.as_alignement( read, database)  );
 				if changes > 0 {
 					
-					match this_option{
-						CigarEnum::Insertion => {
-							deletion_rem = false;
-							for diff in 0..changes {
-								let this = on_read - 1- diff;
-							    if cig_vec[ this ] == CigarEnum::Deletion {
-							    	println!("I have removed a deletion! {}", this );
-							    	if ! deletion_rem{
-							    		deletion_rem = true;
-							    		cig_vec.remove(this);
-							    	}else {
-							    		println!("OOOPS - there would be more than one deletion here - what should I do?!");
-							    	}
-							    }else {
-							    	println!("Change position {} from {} to M", this, cig_vec[this]);
-							    	cig_vec[this] = CigarEnum::Match;
-							    }
+					deletion_rem = 0;
+					for diff in 0..changes {
+						let this = on_read - diff;
+					    if cig_vec[ this ].opposite( &this_option){
+					    	println!("I have removed a deletion! {}", this );
+					    	deletion_rem += 1;
+					    	cig_vec.remove(this);
+					    }else if cig_vec[ this ] == this_option {
+					    	// this needs to be reintroduced!
+					    	//length +=1;
+					    	println!("Change position {} from {} to M", this, cig_vec[this]);
+					    	cig_vec[this] = CigarEnum::Match;
+					    }else {
+					    	println!("Change position {} from {} to M", this, cig_vec[this]);
+					    	cig_vec[this] = CigarEnum::Match;
+					    }
+					}
+					println!("Change position {} from {} to M", on_read - changes, cig_vec[on_read -changes]);
+					cig_vec[on_read - changes  ] =  CigarEnum::Match;
+					for add in 0..length.saturating_sub(deletion_rem)  {
+						// we need to reintroduce our own 'label'!
+						let this = on_read - changes -1 - add ;
+						if this_option.opposite(&cig_vec[ this ]){
+							// just ignore that?
+						}else if this_option == cig_vec[ this ] {
+							// shit - here we need to look for the next possible not me!
+							let mut id = this -1;
+							while this_option == cig_vec[ id ]{
+								id -=1;
 							}
-							println!("Change position {} from {} to M", on_read - changes, cig_vec[on_read -changes]);
-							cig_vec[on_read - changes  ] =  CigarEnum::Match;
-							if ! this_option.opposite(&cig_vec[on_read - changes -1  ])  {
-								println!("Change position {} from {} to {}", on_read - changes -1, cig_vec[on_read -changes -1 ], this_option);
-								cig_vec[on_read - changes -1  ] = this_option;
-							}
-							//println!("Change position {} from {} to {}", on_read - changes , cig_vec[on_read -changes  ], this_option);
-							//cig_vec[on_read - changes   ] = this_option;
-						},
-						CigarEnum::Deletion => {
-							deletion_rem = false;
-							for diff in 0..changes {
-								let this = on_read  - diff;
-							    if cig_vec[ this ] == CigarEnum::Insertion {
-							    	println!("I have removed an Insertion! {}", this );
-							    	if ! deletion_rem {
-							    		deletion_rem = true;
-							    		cig_vec.remove(this);
-							    	}else{
-							    		println!("OOOPS - there would be more than one insertion here - what should I do?!");
-							    	}
-
-							    }else {
-							    	println!("Change position {} from {} to M", this, cig_vec[this]);
-							    	cig_vec[this] = CigarEnum::Match;
-							    }
-							}
-							if ! deletion_rem {
-								cig_vec[on_read - changes  ] = this_option;
-							}
-						},
-						_ => (),
-					};
+							println!("Change position {} from {} to {}", id, cig_vec[ id ], this_option);
+							cig_vec[ id  ] = this_option;
+						}else {
+							println!("Change position {} from {} to {}", this, cig_vec[ this ], this_option);
+							cig_vec[ this  ] = this_option;
+						}
+					}
+					
+					//println!("Change position {} from {} to {}", on_read - changes , cig_vec[on_read -changes  ], this_option);
+					//cig_vec[on_read - changes   ] = this_option;
+						
 					changed = true;
 					println!("the new cigar string: {}", self.vec_to_cigar( &cig_vec)	);
 				}
@@ -614,6 +648,18 @@ impl Cigar{
 		ret
     }
 
+    /// get my cigar as Vec<CigarEnum>
+    pub fn to_vec(&self) ->  Vec<CigarEnum> {
+    	let ret = Vec::<CigarEnum>::with_capacity( self.len());
+    	for ( length, cig_enum ) in self.to_cigar_tupel_vec() {
+    		for 0..length{
+    			ret.push( cig_enum );
+    		}
+    	}
+    	ret
+    }
+
+
     fn string_to_vec(&self, cigar_string:&str ) -> Vec<CigarEnum> {
     	let mut result = Vec::new();
     	let re = Regex::new(r"(\d+)(\w)").unwrap();
@@ -648,7 +694,7 @@ impl Cigar{
 
 
     /// cleanup in this regards is meant to fix alignment errors.
-    pub fn clean_up_cigar<T>(&mut self, _seq1:&T, _seq2:&T)
+    pub fn clean_up_cigar<T>(&mut self, seq1:&T, seq2:&T)
     where
     	T:BinaryMatcher + std::fmt::Display,
     {
@@ -656,7 +702,8 @@ impl Cigar{
     		//eprintln!("This cigar was already fixed!");
    			return ();
     	}
-
+    	( self.dropped_start, self.dropped_end ) = seq2.get_dropped_values();
+    	self.fix_di_problems( 0, seq1, seq2 );
         //println!("Before the soft clip I have this result {self} for these sequences:{seq1}\n {seq2}\n");
         self.soft_clip_start_end();
 
@@ -687,9 +734,11 @@ impl Cigar{
 	        }
 	    }
 	    if other_count == 0 {
+	    	println!("MapQ = {}",40);
 	    	return 40_u8
 	    }
 	    let ratio = (m_count as f32) / ((other_count + m_count) as f32 );
+	    println!("MapQ = {}",  (40.0  * ratio )as u8 );
 	    (40.0  * ratio ) as u8
     }
 
@@ -736,7 +785,6 @@ impl Cigar{
     /// let end = r"((?:[1-7]M|[1-9][0-9]*[IXD]){4,})$";
     pub fn soft_clip_start_end( &mut self) {
     	// actually that is a REALLY bad idea!
-    	return;
 
     	if self.state_changes < 6 && self.fixed == None{
     		self.fixed = Some(CigarEndFix::Na);

@@ -58,6 +58,7 @@ pub trait BinaryMatcher: Sync + std::fmt::Display {
     fn as_dna_string(&self) -> String;
     fn di_nuc_abs_diff(&self, other: &Self) -> f32;
     fn di_nuc_tab(&self) -> Vec<i8>;
+    fn get_dropped_values(&self) -> ( usize, usize);
     fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8>;
     fn is_same_streak(&self, index: usize) -> bool;
     fn len(&self) -> usize;

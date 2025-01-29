@@ -46,7 +46,11 @@ pub struct GeneData {
 	/// and this reports if the first set of next calls has been finished
 	first_set_finished:bool,
 	/// indicates the type of return values - 1bp overlapping tiles (false) or 2bp overlapping tiles (true)
-	index_type: bool
+	index_type: bool,
+	/// keep track of how many bp have been sliced from this entry's start
+	dropped_start:usize,
+	/// keep track of how many bp have been sliced from this entry's end
+	dropped_end:usize,
 }
 
 impl Hash for GeneData {
@@ -115,8 +119,26 @@ impl GeneData{
 			current_position:0,
 			first_set_finished:false,
 			index_type,
+			dropped_start:0,
+			dropped_end:0,
+
 		}
 	}
+
+	/// This function adds the hard clipped regions (clipped using my slice function) to the cigar string
+    pub fn modify_cigar_str( &self, cigar:&str ) -> String {
+
+        let mut ret = if self.dropped_start > 0 {
+            format!("{}H", self.dropped_start) + cigar
+        }else {
+            cigar.to_string()
+        };
+        if self.dropped_end > 0 {
+            ret + &format!("{}H", self.dropped_end)
+        }else {
+            ret
+        }
+    }
 
 	/// This shifts the next 8bp window by 1 bp and sets the start to the sequence start.
 	/// It throws an error if the iterator would reach its end this way.
@@ -250,6 +272,8 @@ impl GeneData{
 			current_position:0,
 			first_set_finished:false,
 			index_type: false,
+			dropped_start:0,
+			dropped_end:0,
 		}
 	}
 
@@ -326,6 +350,14 @@ impl GeneData{
     	}
     	let mut end =start + length;
 
+    	let dropped_end = if end < self.len(){
+    		self.len() - end
+    	}else {
+    		0
+    	};
+
+    	println!("gene_data::GeneData::slice - overhangs: start {start}, dropped_end {dropped_end}");
+
     	if end > self.len(){
     		#[cfg(debug_assertions)]
     		println!("You have requested more than I have ({end} > {} ) - giving you only {}! {self}", self.len(), self.len());
@@ -372,13 +404,16 @@ impl GeneData{
         Some(Self {
             u8_encoded: sliced_data,
             length: end - start,
-            name: (self.name.to_string() + " slice").to_string(),
-            unique_name: (self.unique_name.to_string() + " slice").to_string(),
+            //name: (self.name.to_string() + " slice").to_string(),
+            name: self.name.to_string(),
+            unique_name: self.unique_name.to_string(), //(self.unique_name.to_string() + " slice").to_string(),
             chr : self.chr.to_string(),
             start : self.start + start,
             current_position:0,
             first_set_finished:false,
             index_type : self.index_type,
+            dropped_start: self.dropped_start + start,
+            dropped_end: self.dropped_end + dropped_end,
         })
     }
 
@@ -422,6 +457,10 @@ impl BinaryMatcher for GeneData{
 	
 	fn max3<T: Ord>(a: T, b: T, c: T) -> T {
         max(a, max(b, c))
+    }
+
+    fn get_dropped_values(&self) -> ( usize, usize){
+    	( self.dropped_start, self.dropped_end)
     }
 
     /// checks if the last view nucleotides are all the same.
