@@ -354,7 +354,7 @@ impl <'a> NeedlemanWunschAffine {
 	    let mut cig = Cigar::new("");
 	    cig.convert_to_cigar( &cigar );
 	    self.cigar_vec = Some(cigar.to_vec());
-	    println!("For this alignement I got this cigar:\n{}\n{}\n", self.to_string(read, database, humming_cut), cig );
+	    //println!("For this alignement I got this cigar:\n{}\n{}\n", self.to_string(read, database, humming_cut), cig );
 	    /*#[cfg(debug_assertions)]
 	    if self.debug {
 	    	let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
@@ -376,7 +376,7 @@ impl <'a> NeedlemanWunschAffine {
 
 	    cigar =cig.fix_DI_problems( 0, read, database );
 
-	    println!("{}", cig.as_alignement( read, database ) );
+	    //println!("{}", cig.as_alignement( read, database ) );
 
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		{

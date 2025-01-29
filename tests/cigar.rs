@@ -38,11 +38,11 @@ mod tests {
 		obj.restart_from_cigar("1D15M1I30M");
 		let fixed = obj.to_sam_string();
 
-		assert_eq!( fixed, "15M1I30M", "internal insert overhanging D fixed at start");
+		assert_eq!( fixed, ("15M1I30M".to_string(),(1_usize,0_usize,0_usize)), "internal insert overhanging D fixed at start");
 		
 		obj.restart_from_cigar("15M1I30M1D");
 		let fixed = obj.to_sam_string();
-		assert_eq!( fixed, "15M1I30M", "internal insert overhanging D fixed at end");
+		assert_eq!( fixed, ("15M1I30M".to_string(),(0_usize,0_usize,0_usize)), "internal insert overhanging D fixed at end");
 	}
 
 	#[test]

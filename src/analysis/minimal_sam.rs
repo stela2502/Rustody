@@ -18,29 +18,21 @@ impl MinimalSam {
     		Some(cigar) => 
     		{
 
-    			let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.to_sam_string() );
-    			if mine < read2.len(){
-    				#[cfg(debug_assertions)]
-    				eprintln!("build_sam_record tries to slice the {}bp long seq \n{read2}\n as the cigar {cigar} is shorter.", read2.len());
-    				read2=read2.slice(0, mine ).unwrap();
+    			let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.cigar );
+    			let (sam_str, (diff_start, clip_from_start, clip_from_end) ) = cigar.to_sam_string();
 
+    			if clip_from_start > 0 {
+    				read2=read2.slice(clip_from_start, read2.len() ).unwrap();
     			}
+    			if clip_from_end > 0 {
+    				read2=read2.slice(0, read2.len()-clip_from_end ).unwrap();
+    			}
+    			
     			if mine + gene_id[0].start() > gene_id[0].db_length() {
     				panic!("Cigar suggest longer match than db_length allows!");
     			}
-    			let dels_at_start = cigar.length_del_start();
-    			if dels_at_start > 0 {
-    				( 
-    					gene_id[0].start() +1 + dels_at_start ,
-    					cigar.to_sam_string()
-    				)
-    			}else {
-    				(
-    					gene_id[0].start() +1,
-    					cigar.to_sam_string()
-    				)
-    			}
 
+    			(0, sam_str)
     		},
     		None=> {
     			panic!("An alignement needs to always have a cigar attached!")

@@ -29,6 +29,6 @@ fn main() {
 
     matcher.needleman_wunsch_affine( &read, &database, 10.0 );
 
-    //println!( "{}",matcher.to_string(&read, &database, 10.0 ));
+    println!( "{}",matcher.to_string(&read, &database, 10.0 ));
 
 }
