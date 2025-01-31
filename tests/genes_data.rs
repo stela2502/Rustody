@@ -339,7 +339,7 @@ mod tests {
 		let mut cigar = Cigar::new("");
 		let mut nwa = NeedlemanWunschAffine::new();
 		let _nw = &nwa.needleman_wunsch_affine( &obj2, &obj, 0.4 );
-		cigar.convert_to_cigar( &nwa.cigar_vec() );
+		cigar.reset_fom_path( &nwa.cigar_vec() );
 		//println!("nwa: {}", &nwa.to_string( &obj2, &obj ) );
 		println!("Cigar: {}", cigar );
 		cigar.clean_up_cigar(&obj2, &obj);
@@ -447,7 +447,7 @@ mod tests {
 		let mut cigar = Cigar::new("");
 		//let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 		let _nw = &nwa.needleman_wunsch_affine( &obj2, &obj, 0.4 );
-		cigar.convert_to_cigar( &nwa.cigar_vec() );
+		cigar.reset_fom_path( &nwa.cigar_vec() );
 		cigar.clean_up_cigar(&obj2, &obj);
 		assert_eq!( cigar.cigar, "44M46X", "Cigar string was created correctly!" );
 	}

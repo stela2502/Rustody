@@ -144,16 +144,16 @@ mod tests {
 	fn test_compare() {
 		let mut obj1 = Cigar::new("32M");
 		let mut obj2 = Cigar::new("36M");
-		obj1.convert_to_cigar(&vec![CigarEnum::Match; 32]);
-		obj2.convert_to_cigar(&vec![CigarEnum::Match; 36]);
+		obj1.reset_fom_path(&vec![CigarEnum::Match; 32]);
+		obj2.reset_fom_path(&vec![CigarEnum::Match; 36]);
 
 		assert!( obj2.better_as(&obj1), "{obj2} is better than {obj1}? {}",  obj2.better_as(&obj1) );
 
-		obj1.convert_to_cigar( &[CigarEnum::Insertion, CigarEnum::Match, CigarEnum::Match, 
+		obj1.reset_fom_path( &[CigarEnum::Insertion, CigarEnum::Match, CigarEnum::Match, 
 			CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, 
 			CigarEnum::Deletion, CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, 
 			CigarEnum::Match, ] );
-		obj2.convert_to_cigar( &[CigarEnum::Match, CigarEnum::Match, CigarEnum::Deletion, 
+		obj2.reset_fom_path( &[CigarEnum::Match, CigarEnum::Match, CigarEnum::Deletion, 
 			CigarEnum::Match,CigarEnum::Insertion, CigarEnum::Match, CigarEnum::Match ]);
 		assert!( obj1.better_as(&obj2), "{obj1:?} is better than {obj2:?} ({})", obj2.better_as(&obj1) );
 

@@ -356,7 +356,7 @@ impl GeneData{
     		0
     	};
 
-    	println!("gene_data::GeneData::slice - overhangs: start {start}, dropped_end {dropped_end}");
+    	//println!("gene_data::GeneData::slice - overhangs: start {start}, dropped_end {dropped_end}");
 
     	if end > self.len(){
     		#[cfg(debug_assertions)]
@@ -462,6 +462,14 @@ impl BinaryMatcher for GeneData{
     fn get_dropped_values(&self) -> ( usize, usize){
     	( self.dropped_start, self.dropped_end)
     }
+
+    fn as_str(&self, start:usize, length:usize ) -> Option<String>{
+    	match self.slice( start, length){
+    		Some (this) => Some(this.as_dna_string( )),
+    		None => None
+    	}
+    }
+
 
     /// checks if the last view nucleotides are all the same.
     /// This function is used to modify the matching algorithms.

@@ -68,6 +68,15 @@ impl BinaryMatcher for CellId10x {
         ( 0, 0)
     }
 
+    fn as_str(&self, start:usize, length:usize ) -> Option<String>{
+        if start + length < 16 {
+            let this = &self.as_dna_string()[start..(start+length)];
+            Some( format!("{}", this ) )
+        }else {
+            None
+        }
+    }
+
     fn get_nucleotide_2bit(&self, pos: usize) -> Option<u8> {
         if pos > 16 {
             return None; // Position exceeds the length of the encoded sequence

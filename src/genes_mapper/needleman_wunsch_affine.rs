@@ -352,7 +352,7 @@ impl <'a> NeedlemanWunschAffine {
 
 	    // I need that for the debug:
 	    let mut cig = Cigar::new("");
-	    cig.convert_to_cigar( &cigar );
+	    cig.reset_fom_path( &cigar );
 	    self.cigar_vec = Some(cigar.to_vec());
 	    //println!("For this alignement I got this cigar:\n{}\n{}\n", self.to_string(read, database, humming_cut), cig );
 	    /*#[cfg(debug_assertions)]
@@ -374,30 +374,14 @@ impl <'a> NeedlemanWunschAffine {
 		//"XXDMMMMMMMMMMMMMMMMMMMMMMMMMXXDIMMMMMMMMMMMMMMMMMMXMMMMMMMMMMMMMMMMDDIIMMMMMMMMMMMMMMMMMMMMM"
 
 
-	    cigar =cig.fix_di_problems( 0, read, database );
+	    cig.fix_di_problems( 0, read, database );
 
 	    //println!("{}", cig.as_alignement( read, database ) );
 
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		{
-			cig.convert_to_cigar( &cigar );
-			let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
-	    	println!("del/ins remapped cigar string:\n{cig}\n{}\n{}", alng1, alng2);
+			println!("del/ins remapped cigar string:\n{}", cig.as_alignement(read, database ));
 	    }
-		//cig.convert_to_cigar( &cigar );
-		//println!("{cig}\nIs what we have after and before the fix_1d1i_1i1d() call");
-
-		//cig.clear();
-		//cig.fix_1d1i_1i1d( &mut cigar, None );
-
-		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		{
-			cig.convert_to_cigar( &cigar );
-			let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
-	    	println!("final remapped cigar string:\ndatabase  : {cig}\nread      : {}\nalignement: {}", alng1, alng2);
-	    }
-	    //cig.convert_to_cigar( &cigar );
-	    //println!("After fix_1d1i_1i1d() I have:\n{cig}");
 
 	    self.cigar_vec = Some(cigar.clone());
 	    cigar

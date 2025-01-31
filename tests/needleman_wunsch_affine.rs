@@ -38,7 +38,7 @@ mod tests {
 		assert_eq!( nw, 0.0, "perfect match has nw of 0");
 
 		let mut cigar= Cigar::new( "" );
-		cigar.convert_to_cigar( &test.cigar_vec() );
+		cigar.reset_fom_path( &test.cigar_vec() );
 		let _ =test.export_dp_matrix( &(OPATH.to_string()+"test_needleman_wunsch_affine.tsv"));
 
 		assert_eq!( format!("{}",cigar), "50M - None", "get a perfect 50 bp matching result" )
@@ -63,7 +63,7 @@ mod tests {
 		assert!( nw < 0.5, "this NOT perfect match has nw of less than 0.5");
 
 		let mut cigar= Cigar::new( "" );
-		cigar.convert_to_cigar( &test.cigar_vec() );
+		cigar.reset_fom_path( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_gap.tsv"));
 
 		assert_eq!( format!("{}",cigar), "18M4D28M - None", "get a perfect 50 bp matching result" )
@@ -89,7 +89,7 @@ mod tests {
 		assert!( nw < 0.5, "this NOT perfect match has nw of less than 0.5");
 
 		let mut cigar= Cigar::new( "" );
-		cigar.convert_to_cigar( &test.cigar_vec() );
+		cigar.reset_fom_path( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_insert.tsv"));
 
 		assert_eq!( format!("{}",cigar), "18M4I28M - None", "get a perfect 50 bp matching result" )
@@ -115,7 +115,7 @@ mod tests {
 		//assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 {nw}");
 
 		let mut cigar= Cigar::new( "" );
-		cigar.convert_to_cigar( &test.cigar_vec() );
+		cigar.reset_fom_path( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_gap.tsv"));
 
 		assert_eq!( format!("{}",cigar), "17M84D19M - None", "get a perfect 50 bp matching result" )
@@ -142,7 +142,7 @@ mod tests {
 		//assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 0");
 
 		let mut cigar= Cigar::new( "" );
-		cigar.convert_to_cigar( &test.cigar_vec() );
+		cigar.reset_fom_path( &test.cigar_vec() );
 
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_insert.tsv"));
 
@@ -179,7 +179,7 @@ mod tests {
 		assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 0");
 
 		let mut cigar= Cigar::new( "" );
-		cigar.convert_to_cigar( &test.cigar_vec() );
+		cigar.reset_fom_path( &test.cigar_vec() );
 
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_insertion.tsv"));
 
@@ -206,7 +206,7 @@ mod tests {
 		assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 0");
 
 		let mut cigar= Cigar::new( "" );
-		cigar.convert_to_cigar( &test.cigar_vec() );
+		cigar.reset_fom_path( &test.cigar_vec() );
 
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_deletion.tsv"));
 

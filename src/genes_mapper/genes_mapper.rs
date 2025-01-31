@@ -531,7 +531,7 @@ impl GenesMapper{
 
 				if nw.abs() < self.highest_nw_val  {
 
-					cigar.convert_to_cigar( &nwa.cigar_vec() );
+					cigar.reset_fom_path( &nwa.cigar_vec() );
 					cigar.clean_up_cigar(&read, &database);
 
 

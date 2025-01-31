@@ -66,4 +66,6 @@ pub trait BinaryMatcher: Sync + std::fmt::Display {
     fn needleman_wunsch(&self, other: &Self, humming_cut: f32, cigar: Option<&mut Cigar>) -> f32;
     fn tri_nuc_abs_diff(&self, other: &Self) -> f32;
     fn tri_nuc_tab(&self) -> Vec<i8>;
+    /// should return the string at that position no modification of start and length!
+    fn as_str(&self, start:usize, length:usize ) -> Option<String>;
 }

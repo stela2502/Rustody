@@ -67,6 +67,15 @@ impl BinaryMatcher for SecondSeq {
         ( 0, 0)
     }
 
+    fn as_str(&self, start:usize, length:usize ) -> Option<String>{
+        if start + length < 32 {
+            let this = &self.as_dna_string()[start..(start+length)];
+            Some( format!("{}", this ) )
+        }else {
+            None
+        }
+    }
+
 
     fn as_dna_string(&self) -> String {
         let mut data = String::new();
