@@ -113,7 +113,26 @@ impl CigarTuple {
     pub fn len(&self) -> usize {
     	self.vec_len
     }
+
+    pub fn extend_vec(&self, vec: &mut Vec<CigarEnum>) {
+        vec.extend(std::iter::repeat(self.option).take(self.len()));
+    }
+
+    /// This will 'shorten' the own and return the one that should be inserted after this one
+    /// as a new object.
+    pub fn split_at (&mut self, rel_pos:usize, new_option: CigarEnum ) -> Option<Self>{
+        if self.len() < rel_pos {
+            self.option = new_option;
+            None
+        }else {
+            self.vec_len -= rel_pos;
+            Some(Self::from_scratch(new_option, rel_pos ))
+        }
+    }
+
+
     // You can add other methods to operate on the `CigarTuple`
+
 }
 
 

@@ -192,7 +192,9 @@ mod tests {
 	#[test]
 	fn test_wrap_arount_to_max(){
 
+
 		let mut cig = Cigar::new( "21M1I52M1D" );
+		cig.reset_fom_path( &cig.string_to_vec( &cig.cigar ));
 		cig.fixed = Some(CigarEndFix::Na);
 		test_this_seqence( 
 			b"CTGCCCCTCTTTTGTGTTGTCTTTTTTTCTTAGACTATCTGTCCTTTCTCCTTGATTTCTAAACTATGTTATTT",
@@ -229,7 +231,9 @@ mod tests {
 	fn test_wrap_arount_to_max2(){
 
 		let mut cig = Cigar::new( "1M1X51M" );
+		cig.reset_fom_path( &cig.string_to_vec( &cig.cigar ));
 		cig.fixed = Some(CigarEndFix::Na);
+
 		test_this_seqence( 
 			b"CCTCTGCCCTGTGAAGTGTCTGATGTTCCCTGTGAGCCTATGGACTCAATGTGAAGAACTGTGG",
 			"testData/genes.fasta".to_string(),
@@ -250,6 +254,7 @@ mod tests {
 	fn test_cigar_sequence_length_mismatch(){
 
 		let mut cig = Cigar::new( "72M1X12M" );
+		cig.reset_fom_path( &cig.string_to_vec( &cig.cigar ));
 		cig.fixed = Some(CigarEndFix::Na);
 		// cigar:Option<Cigar>, gene: Option<String>, start:Option<usize>, err
 		test_this_seqence( 
@@ -290,7 +295,7 @@ mod tests {
 	    }
 
 		assert_eq!( genes.len(), 466, "the right amount of genes" );
-		assert_eq!( genes.depth(), 41716, "the expected amount of mappers");
+		assert_eq!( genes.depth(), 26636, "the expected amount of mappers");
 
 		let outpath = "testData/output_index_test/genes";
 

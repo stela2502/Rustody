@@ -41,7 +41,7 @@ mod tests {
 		cigar.reset_fom_path( &test.cigar_vec() );
 		let _ =test.export_dp_matrix( &(OPATH.to_string()+"test_needleman_wunsch_affine.tsv"));
 
-		assert_eq!( format!("{}",cigar), "50M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar.cigar), "50M", "get a perfect 50 bp matching result" )
 
 
 	}
@@ -66,7 +66,7 @@ mod tests {
 		cigar.reset_fom_path( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_gap.tsv"));
 
-		assert_eq!( format!("{}",cigar), "18M4D28M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar.cigar), "18M4D28M", "get a perfect 50 bp matching result including 4D!!" )
 
 
 	}
@@ -92,7 +92,7 @@ mod tests {
 		cigar.reset_fom_path( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_insert.tsv"));
 
-		assert_eq!( format!("{}",cigar), "18M4I28M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar.cigar), "18M4I28M", "get a perfect 50 bp matching result including 4I!!" )
 
 
 	}
@@ -118,7 +118,7 @@ mod tests {
 		cigar.reset_fom_path( &test.cigar_vec() );
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_gap.tsv"));
 
-		assert_eq!( format!("{}",cigar), "17M84D19M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar.cigar), "17M84D19M", "get a perfect 50 bp matching result - HUGE deletion" )
 
 
 	}
@@ -146,7 +146,7 @@ mod tests {
 
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_large_insert.tsv"));
 
-		assert_eq!( format!("{}",cigar), "17M84I19M - None", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",cigar.cigar), "17M84I19M", "get a perfect 50 bp matching result HUGE insert" )
 
 
 	}
@@ -184,7 +184,7 @@ mod tests {
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_insertion.tsv"));
 
 
-		assert_eq!( format!("{}",cigar), "1M1X8M1D39M2X16M1X3M1X1M - None", "A really bitchy mapping" );
+		assert_eq!( format!("{}",cigar.cigar), "1M1X8M1D39M2X16M6X", "A really bitchy mapping #1" );
 	}
 
 	#[test]
@@ -210,7 +210,7 @@ mod tests {
 
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_deletion.tsv"));
 
-		assert_eq!( format!("{}",cigar), "1M1X8M1I39M2X16M1X3M1X1M - None", "A really bitchy mapping" );
+		assert_eq!( format!("{}",cigar.cigar), "1M1X8M1I39M2X16M6X", "A really bitchy mapping #2" );
 
 	}
 

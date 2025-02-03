@@ -143,7 +143,6 @@ impl Cigar{
 		}
     }
 
-
     /// splits the cigar string into CigarTuples. They are a representation of the (\d+)([MIDX]),
     /// but also store their position in both the Vec<CigarEnum> and the cigar.cigar string.
 	fn to_cigar_tupel_vec( &self, only_gaps:bool ) -> Vec<CigarTuple> {
@@ -161,7 +160,7 @@ impl Cigar{
 			let length: usize = cap[1].parse().unwrap();
             let cigar_tuple = CigarTuple::from_match( &cap, vec_pos, str_pos, read_pos, database_pos );
 
-            cigar_tuple.print_debug();
+            //cigar_tuple.print_debug();
             vec_pos += cigar_tuple.vec_len;
             str_pos += cigar_tuple.str_len;
             if cigar_tuple.option == CigarEnum::Insertion{
@@ -183,12 +182,12 @@ impl Cigar{
 	}
 
 
-	fn to_vec (&self) ->  Vec<CigarEnum> {
+	pub fn to_vec (&self) ->  Vec<CigarEnum> {
 		return self.string_to_vec( &self.cigar )
 	}
 
 
-    fn string_to_vec(&self, cigar_string:&str ) -> Vec<CigarEnum> {
+    pub fn string_to_vec(&self, cigar_string:&str ) -> Vec<CigarEnum> {
     	let mut result = Vec::with_capacity( self.len() );
     	let re = Regex::new(r"(\d+)(\w)").unwrap();
     	for cap in re.captures_iter(cigar_string) {
@@ -498,7 +497,7 @@ impl Cigar{
     					}
     				};
     				//println!("Foud a DI or ID problem! at read pos {:?} database_pos {:?}", on_read, on_db );
-    				cigar_tuple_vec[id].print_debug();
+    				//cigar_tuple_vec[id].print_debug();
 
     				if on_read == on_db  {
     					//println!("And they even had the same nucleotides");
@@ -537,7 +536,149 @@ impl Cigar{
 		self.fixed = Some( CigarEndFix::Na );
 	}
 
+	/// fills in matches entries in cigar_tuple_vec with current_tuple while ignoring not_touch and removing not_touch.opposite()
+	/// It starts at id and tranverses the vector in reverse.
+	/// returns the amount of entries that would need to be flipped back - if applicable and the id to start at if
+	/// reverting is of interest.
+	fn replace_n_and_start_at<T>(&mut self,  cigar_tuple_vec: &mut Vec<CigarTuple>, current_tuple: CigarEnum, 
+		kill: Option<CigarEnum>, to_flip: usize, id:usize, read:&T, database:&T) -> Result<usize,String> where
+    T: BinaryMatcher{
 
+		let mut this = id;
+		let mut dropped = 0;
+		let mut added = 0;
+		let mut matches = to_flip;
+		let mut last_gap;
+		let mut skip = 0;
+
+		let mut flip_back:i32 = 0;
+		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		println!("replace_n_and_start_at introducing {} while removing {:?}",current_tuple, kill);
+
+		while matches > 0{
+			last_gap = matches;
+			//println!("Still some way to go: {matches} with this == {this} and flip_back {flip_back}");
+			if kill
+			    .as_ref()
+			    .map_or(false, |nt| nt == &cigar_tuple_vec[this].option)
+			{
+				//println!("Removoing an opponent: {}",cigar_tuple_vec[this] );
+
+				dropped += cigar_tuple_vec[this].len();
+				flip_back -=  (cigar_tuple_vec[this].len()) as i32;
+				cigar_tuple_vec.remove( this );
+
+			}
+			else if cigar_tuple_vec[this].option.is_gap(){
+				//println!("Found the gap {}", cigar_tuple_vec[this] );
+				match cigar_tuple_vec[this].split_at( matches, current_tuple){
+					Some(new_fragment) => {
+						matches -= new_fragment.len();
+						flip_back += (new_fragment.len()) as i32;
+						cigar_tuple_vec.insert(this+1, new_fragment);
+					},
+					None => {
+						flip_back += (cigar_tuple_vec[this].len()) as i32;
+						matches -= cigar_tuple_vec[this].len();
+						this -=1;
+						skip +=1;
+					}
+				}
+			}else{
+				//println!("Found {}", cigar_tuple_vec[this]);
+				match cigar_tuple_vec[this].split_at( matches, current_tuple){
+					Some(new_fragment) => {
+						matches -= new_fragment.len();
+						cigar_tuple_vec.insert(this+1, new_fragment);
+					},
+					None => {
+						matches -= cigar_tuple_vec[this].len();
+						this -=1;
+						skip +=1;
+					}
+				}
+			}
+
+			/*let mut cig = "".to_string();
+    		for  entry in &mut *cigar_tuple_vec{
+    			cig += &entry.to_string();
+    		}
+    		let mut report = self.clone();
+    		report.restart_from_cigar( &cig );
+    		println!("             updated: {matches} with this == {this} and flip_back {flip_back}");
+			println!("Intermediate alignement at {this}; {}:\n{}", cigar_tuple_vec[this], report.as_alignement( read, database) );
+			*/
+		}
+		// so let's see if we need to re-introduce some
+		let flip_to =  match kill {
+			Some(v) => v.get_opposite(),
+			None => return Ok( skip + added ),
+		};
+
+		//println!("####################################\nadd the gaps back in\n####################################\n");
+
+		while flip_back > 0 {
+			//println!("Found {} - trying to flip {flip_back} entries to {flip_to}", cigar_tuple_vec[this]);
+			if cigar_tuple_vec[this].option == flip_to {
+				//println!("alread a {} - no change {flip_back} (this={this}", flip_to);
+				this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
+				skip +=1;
+			}else if cigar_tuple_vec[this].option.opposite(&flip_to) {
+				flip_back -= cigar_tuple_vec[this].vec_len as i32;
+				
+				cigar_tuple_vec[this].vec_len = 0;
+				this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
+				skip +=1;
+
+				//println!("This is the opposite - right - killing it end reducing flip_back to {flip_back} (this={this}");
+			}
+			else {
+				match cigar_tuple_vec[this].split_at( flip_back.try_into().unwrap() , flip_to){
+					Some(new_fragment) => {
+						flip_back -= new_fragment.len() as i32;
+						cigar_tuple_vec.insert(this+1, new_fragment);
+						added +=1;
+						//println!("overly large match!");
+						if flip_back > 0 {
+							this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
+							skip +=1;
+						}
+					},
+					None => {
+						//println!("Too small match");
+						flip_back -= cigar_tuple_vec[this].len() as i32;
+						if flip_back > 0 {
+							this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
+							skip +=1;
+						}
+					}
+				}
+			}
+			
+			/*let mut cig = "".to_string();
+    		for  entry in &mut *cigar_tuple_vec{
+    			cig += &entry.to_string();
+    		}
+    		let mut report = self.clone();
+    		report.restart_from_cigar( &cig );
+    		println!("   re-adding updated: {matches} with this == {this} and flip_back {flip_back}");
+			println!("Intermediate alignement at {this}; {}:\n{}", cigar_tuple_vec[this], report.as_alignement( read, database) );
+			*/
+			if flip_back == 0 {
+				break;
+			}
+		}
+		let mut cig =  Vec::<CigarEnum>::with_capacity( cigar_tuple_vec.iter().map(|v| v.len()).sum::<usize>() );
+    	cigar_tuple_vec.iter().for_each(|v| v.extend_vec( &mut cig ) );
+
+		self.clear();
+		self.reset_fom_path( &cig );
+
+		//#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		println!("####################################\nAfter the fix I got the alignement:\n{}\n####################################", self.as_alignement(read, database));
+
+		return Ok( skip + added +1 );
+	}
 
 	/// a streamlined function that processes the match from the rear and checks both deletions and insertions.
 	/// Tuns multiple times untill there are no more entries to be checked or there are no more deletions/insertions in the data.
@@ -547,14 +688,14 @@ impl Cigar{
 
     	if self.contains[CigarEnum::Deletion.to_id()] || self.contains[CigarEnum::Insertion.to_id()]{
     		//println!("Fixing {} locations in this alignement:\n{}", this_option, self.as_alignement(read, database) );
-    		let mut cigar_vec = self.to_vec();
+    		//let mut cigar_vec = self.to_vec();
     		let mut skipped = skip;
 
     		let mut cigar_tuple_vec = self.to_cigar_tupel_vec( false );
     		if skip >= cigar_tuple_vec.len() -2 {
     			return;
     		}
-    		for id in (1..cigar_tuple_vec.len()-1).rev() {
+    		for id in (1..cigar_tuple_vec.len()-1).rev().skip( skip ) {
 				skipped +=1;
     			if ! cigar_tuple_vec[id].is_gap(){
     				continue;
@@ -564,10 +705,10 @@ impl Cigar{
 
     			let (on_read, on_db ) = match current_tuple.option{
     				CigarEnum::Insertion => {
-    					( current_tuple.read_position + current_tuple.len() -1 , current_tuple.database_position-1 )
+    					( current_tuple.read_position + current_tuple.len() - 1 , current_tuple.database_position - 1 )
     				},
     				CigarEnum::Deletion =>  {
-    					( current_tuple.read_position-1, current_tuple.database_position + current_tuple.len()-1 )
+    					( current_tuple.read_position - 1, current_tuple.database_position + current_tuple.len() - 1 )
     				},
     				_ => {
     					panic!("This is no gap enum: {}", current_tuple.option );
@@ -576,8 +717,11 @@ impl Cigar{
     			};
 
     			let mut matches = self.neg_look_ahead(read, database, on_read, on_db );
+    			if matches == 0 {
+    				continue;
+    			}
 
-    			//#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+    			#[cfg(all(debug_assertions, feature = "mapping_debug"))]
     			{
     				println!("{}\nI found a gap {} at read {} db {} and the overlap was {}",
 	    			 self.as_alignement( read, database),
@@ -590,81 +734,22 @@ impl Cigar{
 
 	    		// probably better to keep that on the level of touples again.
 
-	    		// see if we can finish this element
-	    		if cigar_tuple_vec[id].len() < matches {
-	    			// just use this as my matches but we have sucked up to much of one sequence
-	    			println!("{} can not suck up out matches {matches}", cigar_tuple_vec[id]);
-	    			matches -= cigar_tuple_vec[id].len();
-	    			// we only need to revert the additinal numcleotide's matches
-	    			cigar_tuple_vec[id].option = CigarEnum::Match
-	    		}else {
-	    			// Oh good - we are finished here!
-	    			println!("This {} is more space than we need - finish it up here", cigar_tuple_vec[id]);
-	    			let mut temp = cigar_tuple_vec[id].clone();
-	    			temp.vec_len -= matches;
-	    			cigar_tuple_vec.insert( id, temp);
-	    			cigar_tuple_vec[id+1] = CigarTuple::from_scratch( CigarEnum::Match, matches );
-	    			println!("We have split the data up into {} and {} ", cigar_tuple_vec[id], cigar_tuple_vec[id+1]);
-	    			skipped +=1;
-	    			matches = 0;
-	    		}
-	    		let mut this = id;
-	    		println!("Still some way to go: {matches}");
-    			while matches > 0 {
-    				if this == 0 {
-    					panic!("Lib error - I could not move my gap!\n{}", self.as_alignement(read, database));
-    				}
-    				skipped +=1;
-    				if current_tuple.option.opposite( &cigar_tuple_vec[this].option ){
-    					println!("Removoing an opponent: {}",cigar_tuple_vec[this] );
-    					cigar_tuple_vec.remove( this );
-    					continue;
-    				}
-    				if cigar_tuple_vec[this].option == current_tuple.option {
-    					// this can suck up the rest of my info!
 
-    					println!("Found the same gap - but I need to convert others :-(!");
-    					this -=1;
-    					continue;
-    				}
-    				if cigar_tuple_vec[this].len() < matches {
-    					println!("Found {} - I need MOORE :-(!", cigar_tuple_vec[this]);
-    					cigar_tuple_vec[this].option = current_tuple.option;
-    					matches -= cigar_tuple_vec[this].len();
-    					this -=1;
-    				}else {
-    					// now we hit a tuple with more entries than we need which is not a gap
-    					// create a new tupel and add that behind the one we have at hand
-    					println!("Found {} - this is all I had needed...", cigar_tuple_vec[this]);
-    					let temp = CigarTuple::from_scratch(current_tuple.option , matches );
-    					if this + 1 < cigar_tuple_vec.len() {
-				            cigar_tuple_vec.insert(this + 1, temp);
-				        } else {
-				            cigar_tuple_vec.push(temp); // Push if at the end
-				        }
-				        skipped +=1;
-    					cigar_tuple_vec[this].vec_len -= matches;
-    					matches = 0;
-    				}
-    			}
+	    		let skip_more = match self.replace_n_and_start_at( &mut cigar_tuple_vec, CigarEnum::Match, 
+	    			Some(current_tuple.option.get_opposite()), matches, id, read, database ){
+	    			Ok(ret) => ret,
+	    			Err(e) => {
+	    				panic!("replace_n_and_start_at to {} evade {:?}: {e}\n{} and flip {matches}",  CigarEnum::Match, Some(current_tuple.option), self.as_alignement( read, database) );
+	    			}
+	    		};
 
-    			let mut cig = "".to_string();
-    			for entry in &cigar_tuple_vec{
-    				cig += &entry.to_string();
+    			#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+    			println!("After the fix:\n{}\n####################################\n", self.as_alignement( read, database));
+    			if ! self.contains[CigarEnum::Mismatch.to_id()]{
+    				break;
     			}
-    			self.restart_from_cigar( &cig );
-    			//#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-    			println!("After the fix:\n{}", self.as_alignement( read, database));
- 				
     		}
 
-    		println!( "Skip and skipped: {} {}", skip, skipped);
-    		if skipped == skip || skip > self.state_changes {
-    			return
-    			
-    		}
-    		// there were more changes to be checked
-    		self.fix_next_gap_location( read, database, skipped )
 		}
 	}
 
@@ -975,8 +1060,9 @@ impl Cigar{
 	            //println!("Count with state {last_direction:?} increased to {count}");
 	        }
 	        else {
-	        	self.state_changes += 1;
+	        	
 	            if count > 0 {
+	            	self.state_changes += 1;
 	                self.cigar.push_str(&format!("{}{}",count, last_direction.unwrap()));
 	                self.contains[last_direction.unwrap().to_id()] =  true ;
 	                //println!("Added {count}{last_direction:?}");

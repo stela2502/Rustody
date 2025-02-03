@@ -14,7 +14,7 @@ pub struct NeedlemanWunschAffine{
 	dp: Vec<Vec<i32>>,
 	n: usize,
 	m: usize,
-	cigar_vec: Option<Vec<CigarEnum>>,
+	cigar: Cigar,
 	//circles:usize,
 	debug:bool,
 }
@@ -29,11 +29,15 @@ impl <'a> NeedlemanWunschAffine {
 	    	dp : Vec::<Vec::<i32>>::new(),
 	    	n: 0,
 	    	m: 0,
-	    	cigar_vec: None,
+	    	cigar: Cigar::default(),
 	    	//circles:0,
 	    	debug: false,
 	    };
 	    me
+	}
+
+	pub fn cigar(&self) -> Cigar{
+		self.cigar.clone()
 	}
 
 	pub fn debug( &self ) -> bool{
@@ -47,6 +51,7 @@ impl <'a> NeedlemanWunschAffine {
 	pub fn initialize( &mut self, rows:usize, cols:usize ){
 
 		let size = rows.max(cols);
+		self.cigar.clear();
 
 		if self.dp.len() < size +2 || self.dp[0].len() < size +2 {
 			self.dp = vec![vec![0; size + 2]; size + 2];
@@ -61,31 +66,15 @@ impl <'a> NeedlemanWunschAffine {
 	pub fn to_string<T>( &mut self, read: &T, database: &T, humming_cut: f32 ) -> String 
 	where
     T: BinaryMatcher + std::fmt::Display{
-
-    	let cigar_vec = match &self.cigar_vec {
-    		Some(vec) => vec.clone(),
-    		None => self.to_cigar_vec(read, database, humming_cut),
-    	};
-		let ( aligned1, aligned2 ) = self.needleman_wunsch_affine_backtrack(read, database, &cigar_vec );
-		let cig_str = Self::cigar_to_string( &cigar_vec );
-		format!("read:\n{}\ndatabase\n{}\nalignement:\n{:?}\n{:?}\n{:?}", 
-			&read, &database, 
-			&aligned1 , 
-			&aligned2,
-			cig_str
-		)
+    	format!("alignement:\n{}",self.cigar.as_alignement(read, database ))
 	}
 
 	pub fn int_state_to_string<T>( &mut self, read: &T, database: &T, cigar_vec: &[CigarEnum] ) -> String 
 	where
     T: BinaryMatcher + std::fmt::Display{
-		let ( aligned1, aligned2 ) = self.needleman_wunsch_affine_backtrack(read, database, cigar_vec );
-		let cig_str = Self::cigar_to_string( &cigar_vec );
-		format!("alignement:\n{:?}\n{:?}\n{cig_str:?}", 
-			//&read.as_dna_string(), &database.as_dna_string(), 
-			&aligned1 , 
-			&aligned2 
-		)
+    	self.cigar.reset_fom_path( cigar_vec );
+
+    	format!("alignement: {}", self.cigar.as_alignement( read, database))
 	}
 
 	/// calculates a needleman_wunsch_affine matrix and returns the final value scaled to the shorter sequence length.
@@ -95,7 +84,7 @@ impl <'a> NeedlemanWunschAffine {
 
     	if read.as_dna_string() == database.as_dna_string() {
     		// a 100% match?!
-    		self.cigar_vec = Some( vec![CigarEnum::Match; read.len() ] );
+    		self.cigar.restart_from_cigar( &format!("{}M", database.len()) );
     		return 0.0
     	}
 
@@ -142,7 +131,7 @@ impl <'a> NeedlemanWunschAffine {
 		    }
 		}
 	    let size = n.min(m) as f32;
-	    self.cigar_vec = Some(self.to_cigar_vec( read, database, humming_cut ));
+	    self.to_cigar( read, database, humming_cut );
 	    // this call might have swapped but the self.n and self.m have been updated!
 	    (size - self.dp[self.n][self.m] as f32) / size
 
@@ -255,21 +244,24 @@ impl <'a> NeedlemanWunschAffine {
 	}*/
 
 	pub fn cigar_vec( &self ) -> Vec<CigarEnum>{
-		match &self.cigar_vec{
-			Some(vec) => vec.to_vec(),
-			None => Vec::new(),
-		}
+		self.cigar.to_vec()
 	}
 
 
 	/// This will create the Cigar states vector from the internal matrix.
-	pub fn to_cigar_vec<T>(&mut self, read: &T, database: &T, humming_cut: f32) -> Vec<CigarEnum> 
+	pub fn to_cigar<T>(&mut self, read: &T, database: &T, humming_cut: f32 ) 
 	where
     T: BinaryMatcher {
 
     	//println!("needleman_wunsch_affine::to_cigar_vec is called.");
 
 		let (mut i, mut j) = (read.len(), database.len());
+
+		if self.cigar.len() == i.max(j) {
+			// this seams to have been run already?!
+			return;
+		}
+			
 
 	    let mut cigar = vec![CigarEnum::Empty;i.max(j)];
 	    
@@ -349,13 +341,13 @@ impl <'a> NeedlemanWunschAffine {
 	    }
 
 		
-
+ 		/*
 	    // I need that for the debug:
 	    let mut cig = Cigar::new("");
 	    cig.reset_fom_path( &cigar );
 	    self.cigar_vec = Some(cigar.to_vec());
 	    //println!("For this alignement I got this cigar:\n{}\n{}\n", self.to_string(read, database, humming_cut), cig );
-	    /*#[cfg(debug_assertions)]
+	   #[cfg(debug_assertions)]
 	    if self.debug {
 	    	let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
 	    	println!("Initial cigar string:\n{cig}\n{}\n{}", alng1, alng2 );
@@ -372,19 +364,16 @@ impl <'a> NeedlemanWunschAffine {
 		//"cg-TGTCTCTAGCTGCATATGTAGCAGAga-aTGGCCTAGTCGGCCATCAcTGGGAAGAGAGGCCCC--ttGGTCTTGCAAACTTTATATGC"
 		//"tcgTGTCTCTAGCTGCATATGTAGCAGAaga-TGGCCTAGTCGGCCATCAtTGGGAAGAGAGGCCCCtt--GGTCTTGCAAACTTTATATGC"
 		//"XXDMMMMMMMMMMMMMMMMMMMMMMMMMXXDIMMMMMMMMMMMMMMMMMMXMMMMMMMMMMMMMMMMDDIIMMMMMMMMMMMMMMMMMMMMM"
-
-
-	    cig.fix_di_problems( 0, read, database );
+		self.cigar.reset_fom_path ( &cigar );
+		self.cigar.fix_di_problems (0, read, database );
 
 	    //println!("{}", cig.as_alignement( read, database ) );
 
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		{
-			println!("del/ins remapped cigar string:\n{}", cig.as_alignement(read, database ));
+			println!("del/ins remapped cigar string:\n{}", self.cigar.as_alignement(read, database ));
 	    }
 
-	    self.cigar_vec = Some(cigar.clone());
-	    cigar
 	}
 
 	/// a rather useless function converting the Cigar vector to a String - No Cigar string - but the exptended version.

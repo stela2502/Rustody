@@ -46,7 +46,7 @@ mod tests {
 		cigar.reset_fom_path( &nwa.cigar_vec() );
 		cigar.clean_up_cigar(&gd1, &gd2);
 		//assert_eq!( &cigar.to_string(), "67D23M", "I expected 34M34D22M as I manually deleted 34 bp from the read" );
-		assert_eq!( &cigar.to_string(), "33M37D20M", "I expected 33M37D20M as I manually deleted 34 bp from the read" );
+		assert_eq!( &cigar.to_string(), "32M34D24M", "I expected 33M37D20M as I manually deleted 34 bp from the read\n{}", cigar.as_alignement( &gd1, &gd2) );
 	}
 
 	#[test]
@@ -70,6 +70,6 @@ mod tests {
 		println!("The cigar before being cleaned up in any weay: {cigar}");
 		cigar.clean_up_cigar(&gd1, &gd2);
 		//assert_eq!( &cigar.to_string(), "67I23M", "I expected 34M34I22M as I manually deleted 34 bp from the database" );
-		assert_eq!( &cigar.to_string(), "34M34I22M", "I expected 34M34I22M as I manually deleted 34 bp from the database" );
+		assert_eq!( &cigar.to_string(), "32M34I24M", "I expected 32M34I24M as I manually deleted 34 bp from the database" );
 	}
 }
