@@ -516,7 +516,7 @@ impl FastMapper{
         let mut long = String::from("");
         let tool = IntToStr::new(b"AAAAA".to_vec(), 32).unwrap();
 
-        self.tool.from_vec_u8( seq.to_vec() );
+        let _ = self.tool.from_vec_u8( seq.to_vec() );
         for entries in self.tool.by_ref(){
 
             //println!("add -> I got the u16 {} and the u64 as {}",entries.0, entries.1);
@@ -765,7 +765,7 @@ impl FastMapper{
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
         //let mut tool = IntToStr::new(seq.to_vec(), self.tool.kmer_size);
         let mut i = 0;
-        tool.from_vec_u8( seq.to_vec() );
+        let _ = tool.from_vec_u8( seq.to_vec() );
         let mut na = 0;
         //let mut item = self.tool.next();
 
@@ -862,7 +862,7 @@ impl FastMapper{
 
         //let mut possible_genes = HashMap::<usize, usize>::with_capacity(10);
 
-        tool.from_vec_u8( seq.to_vec() );
+        let _ = tool.from_vec_u8( seq.to_vec() );
 
         //let mut item = self.tool.next();
 

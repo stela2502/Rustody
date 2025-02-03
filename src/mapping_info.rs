@@ -158,7 +158,10 @@ impl MappingInfo{
 
         // Iterate over the error_counts and write each as a row in the CSV
         for (error_type, count) in &self.error_counts {
-            writeln!(file, "{}\t{}", error_type, count);  // Write each error type and count
+            match writeln!(file, "{}\t{}", error_type, count){
+            	Ok(_) => {},
+            	Err(err) => eprintln!("An error occured while exporting the mapping report:\n{err}"),
+            };  // Write each error type and count
         }
 
         //Ok(())  // Return Ok if successful

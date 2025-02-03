@@ -143,7 +143,7 @@ impl CellData{
     pub fn merge_re_id_genes(&mut self, other: &CellData, other_genes: &Vec::<usize> ) {
         self.total_umis += other.total_umis;
 
-        for (gene_umi_combo, counts) in &other.genes {
+        for (gene_umi_combo, _counts) in &other.genes {
             // re-id the UMI count touple
             let re_ided_umi_combo= GeneUmiHash( 
                 other_genes[gene_umi_combo.0],

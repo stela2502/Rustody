@@ -2,7 +2,7 @@
 
 use crate::traits::Cell;
 use crate::traits::BinaryMatcher;
-use crate::genes_mapper::gene_data::GeneData;
+//use crate::genes_mapper::gene_data::GeneData;
 use crate::genes_mapper::cigar::{ CigarTuple, CigarEnum };
 
 
@@ -275,11 +275,11 @@ impl Cigar{
 	        }
 	    }
 	    if other_count == 0 {
-	    	println!("MapQ = {}",40);
+	    	//println!("MapQ = {}",40);
 	    	return 40_u8
 	    }
 	    let ratio = (m_count as f32) / ((other_count + m_count) as f32 );
-	    println!("MapQ = {}",  (40.0  * ratio )as u8 );
+	    //println!("MapQ = {}",  (40.0  * ratio )as u8 );
 	    (40.0  * ratio ) as u8
     }
 
@@ -434,7 +434,8 @@ impl Cigar{
     /// --tt
     /// tt-- combinations. So to say just mapping errors.
     /// They need to go!
-    pub fn fix_di_problems<T>( &mut self, mapping_start: usize, read:&T, database:&T )
+    #[allow(unused_variables)]
+    pub fn fix_di_problems<T>( &mut self, _mapping_start: usize, read:&T, database:&T )
     where
     T: BinaryMatcher{
     	if self.contains.iter().all( |&t| t ) && self.state_changes > 20 {
@@ -476,7 +477,7 @@ impl Cigar{
     			// and the length of both of them needs to be the same
     			&& cigar_tuple_vec[id].len() == cigar_tuple_vec[id-1].len() 
     			{
-    				let len = cigar_tuple_vec[id].len();
+    				//let len = cigar_tuple_vec[id].len();
 
     				let (on_read, on_db) = match cigar_tuple_vec[id].option{
     					CigarEnum::Insertion => {
@@ -540,15 +541,17 @@ impl Cigar{
 	/// It starts at id and tranverses the vector in reverse.
 	/// returns the amount of entries that would need to be flipped back - if applicable and the id to start at if
 	/// reverting is of interest.
+	#[allow(unused_variables)]
 	fn replace_n_and_start_at<T>(&mut self,  cigar_tuple_vec: &mut Vec<CigarTuple>, current_tuple: CigarEnum, 
 		kill: Option<CigarEnum>, to_flip: usize, id:usize, read:&T, database:&T) -> Result<usize,String> where
     T: BinaryMatcher{
 
 		let mut this = id;
+		#[allow(unused_variables)]
 		let mut dropped = 0;
 		let mut added = 0;
 		let mut matches = to_flip;
-		let mut last_gap;
+		//let mut last_gap;
 		let mut skip = 0;
 
 		let mut flip_back:i32 = 0;
@@ -556,7 +559,7 @@ impl Cigar{
 		println!("replace_n_and_start_at introducing {} while removing {:?}",current_tuple, kill);
 
 		while matches > 0{
-			last_gap = matches;
+			//last_gap = matches;
 			//println!("Still some way to go: {matches} with this == {this} and flip_back {flip_back}");
 			if kill
 			    .as_ref()
@@ -674,7 +677,7 @@ impl Cigar{
 		self.clear();
 		self.reset_fom_path( &cig );
 
-		//#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		println!("####################################\nAfter the fix I got the alignement:\n{}\n####################################", self.as_alignement(read, database));
 
 		return Ok( skip + added +1 );
@@ -689,19 +692,18 @@ impl Cigar{
     	if self.contains[CigarEnum::Deletion.to_id()] || self.contains[CigarEnum::Insertion.to_id()]{
     		//println!("Fixing {} locations in this alignement:\n{}", this_option, self.as_alignement(read, database) );
     		//let mut cigar_vec = self.to_vec();
-    		let mut skipped = skip;
+    		//let mut skipped = skip;
 
     		let mut cigar_tuple_vec = self.to_cigar_tupel_vec( false );
     		if skip >= cigar_tuple_vec.len() -2 {
     			return;
     		}
     		for id in (1..cigar_tuple_vec.len()-1).rev().skip( skip ) {
-				skipped +=1;
+				//skipped +=1;
     			if ! cigar_tuple_vec[id].is_gap(){
     				continue;
     			}
-    			let mut current_tuple = cigar_tuple_vec[id].clone();
-    			let inv_option = current_tuple.option.get_opposite();
+    			let current_tuple = cigar_tuple_vec[id].clone();
 
     			let (on_read, on_db ) = match current_tuple.option{
     				CigarEnum::Insertion => {
@@ -716,7 +718,7 @@ impl Cigar{
 
     			};
 
-    			let mut matches = self.neg_look_ahead(read, database, on_read, on_db );
+    			let matches = self.neg_look_ahead(read, database, on_read, on_db );
     			if matches == 0 {
     				continue;
     			}
@@ -734,8 +736,7 @@ impl Cigar{
 
 	    		// probably better to keep that on the level of touples again.
 
-
-	    		let skip_more = match self.replace_n_and_start_at( &mut cigar_tuple_vec, CigarEnum::Match, 
+	    		let _skip_more = match self.replace_n_and_start_at( &mut cigar_tuple_vec, CigarEnum::Match, 
 	    			Some(current_tuple.option.get_opposite()), matches, id, read, database ){
 	    			Ok(ret) => ret,
 	    			Err(e) => {
@@ -752,79 +753,6 @@ impl Cigar{
 
 		}
 	}
-
-    pub fn fix_border_insertion( &mut self, mapping_start: usize, read:&GeneData, database:&GeneData )->usize{
-    	return 0;
-    	let mut ret =0 ;
-    	if self.contains[CigarEnum::Insertion.to_id()] {
-			let re_start = Regex::new(r"^(\d+)I").unwrap();
-			if let Some(mat) =re_start.captures(&self.cigar) {
-				#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-				println!("The cigar has a start I stretch - checking if the database would have the same sequence: {}",&self.cigar);
-
-				let mut cigar_vec = self.string_to_vec( &self.cigar );
-				// this means likely that my read does reach into the < start area of the gene
-				let count: usize = mat[1].parse().unwrap();
-
-				for i in 0..count  { //  runs once for count==1
-					if read.get_nucleotide_2bit( i ) == database.get_nucleotide_2bit( mapping_start - (count -i) ){
-						#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-						println!("The sequence at database position {} is the same as the sequence on read position {}", 
-							mapping_start - (count -i), i );
-						cigar_vec[i] = CigarEnum::Match;
-					}else {
-						#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-						println!("The sequence at database position {} is NOT the same as the sequence on read position {}",
-							 mapping_start - (count -i),
-							 i
-						);
-						cigar_vec[i] = CigarEnum::Mismatch;
-					}
-				}
-				ret = count;
-				self.clear();
-				self.reset_fom_path( &cigar_vec );
-				#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-				println!("The updated Cigar looks like that: {self}");
-			}
-			// we now also need to check if the end would also contain I's
-			let re_end = Regex::new(r"(\d+)I$").unwrap();
-			if let Some(mat) =re_end.captures(&self.cigar) {
-
-				#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-				println!("The cigar has a end I stretch - checking if the database would have the same sequence: {}",&self.cigar);
-
-				let mut cigar_vec = self.string_to_vec( &self.cigar );
-				// this means likely that my read does reach into the < start area of the gene
-				let count: usize = mat[1].parse().unwrap();
-				let (_mine, other) = self.calculate_covered_nucleotides(&self.cigar );
-				let cigar_vec_len = cigar_vec.len();
-				for i in 0..count  { //  runs once for count==1
-					if read.get_nucleotide_2bit( read.len() - count + i ) == database.get_nucleotide_2bit( mapping_start + other +i  ) {
-						#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-						println!("The sequence at database position {} is the same as the sequence on read position {}",
-							mapping_start + other +i  , read.len() - count + i +1
-						);
-						cigar_vec[ cigar_vec_len - i -1 ] = CigarEnum::Match;
-					}else {
-						#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-						println!("The sequence at database position {} ({:?}) is NOT the same as the sequence on read position {} ({:?})", 
-							mapping_start + other +i +1, database.get_nucleotide_2bit( mapping_start + other +i +1  ),
-							read.len() - count + i , read.get_nucleotide_2bit( read.len() - count + i +1 )
-						);
-						cigar_vec[ cigar_vec_len - i -1 ] = CigarEnum::Mismatch;
-					}
-				}
-				self.clear();
-				self.reset_fom_path( &cigar_vec );
-				#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-				println!("The updated Cigar looks like that: {self}");
-			}
-		}
-		ret
-    }
-
-
 
 
     /// This will soft clip (or better replace with X's) unstable alignements that shift between states frequently and have a low matching count
@@ -864,7 +792,7 @@ impl Cigar{
 				        let clipped_part = &self.cigar[(clippable.start()+2)..clippable.end()];
 
 						#[cfg(debug_assertions)]	        
-				        let (mine, other) = self.calculate_covered_nucleotides(clipped_part);
+				        let (mine, _other) = self.calculate_covered_nucleotides(clipped_part);
 				        #[cfg(not(debug_assertions))]
 				        let (mine, _other) = self.calculate_covered_nucleotides(clipped_part);
 
@@ -1021,7 +949,7 @@ impl Cigar{
 	}
 
 
-	fn vec_to_cigar(&self, path: &[CigarEnum] ) -> String{
+/*	fn vec_to_cigar(&self, path: &[CigarEnum] ) -> String{
 		let mut count = 0;
 	    let mut last_direction = None;
 	    let mut ret = "".to_string();
@@ -1040,7 +968,7 @@ impl Cigar{
 	    }
 	    ret
 	}
-
+*/
 	/// converts a CigarEnum vector into a Cigar string and stores that internally.
 	/// This function also updated the contains vector.
 	pub fn reset_fom_path(&mut self, path: &[CigarEnum] ){

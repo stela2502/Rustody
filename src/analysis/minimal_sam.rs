@@ -15,7 +15,7 @@ impl MinimalSam {
 
 	pub fn to_sam_line (&self, read:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec, index:&GenesMapper ) -> Option<String>{
 
-		let mut read2 = read.clone();
+		let read2 = read.clone();
 		let mut bam_flag = BamFlag::default();
 		if gene_id.len() > 1 {
 			bam_flag.set_secondary(true);

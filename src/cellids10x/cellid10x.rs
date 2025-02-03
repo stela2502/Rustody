@@ -171,7 +171,7 @@ impl BinaryMatcher for CellId10x {
     /// if the end of the sequence is less than 3 bases away.
     fn is_same_streak(&self, index: usize) -> bool {
         // Check the current nucleotide and the previous two nucleotides in the sequence
-        let prev3 = self.get_nucleotide_2bit(index - 3);
+        //let prev3 = self.get_nucleotide_2bit(index - 3);
         if let (Some(curr), Some(prev1), Some(prev2), Some(prev3) ) = (
             self.get_nucleotide_2bit(index),
             self.get_nucleotide_2bit(index - 1), // previous nucleotide

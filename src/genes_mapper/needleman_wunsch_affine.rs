@@ -63,7 +63,7 @@ impl <'a> NeedlemanWunschAffine {
 
 	}
 
-	pub fn to_string<T>( &mut self, read: &T, database: &T, humming_cut: f32 ) -> String 
+	pub fn to_string<T>( &mut self, read: &T, database: &T, _humming_cut: f32 ) -> String 
 	where
     T: BinaryMatcher + std::fmt::Display{
     	format!("alignement:\n{}",self.cigar.as_alignement(read, database ))
@@ -249,7 +249,7 @@ impl <'a> NeedlemanWunschAffine {
 
 
 	/// This will create the Cigar states vector from the internal matrix.
-	pub fn to_cigar<T>(&mut self, read: &T, database: &T, humming_cut: f32 ) 
+	pub fn to_cigar<T>(&mut self, read: &T, database: &T, _humming_cut: f32 ) 
 	where
     T: BinaryMatcher {
 
@@ -341,29 +341,6 @@ impl <'a> NeedlemanWunschAffine {
 	    }
 
 		
- 		/*
-	    // I need that for the debug:
-	    let mut cig = Cigar::new("");
-	    cig.reset_fom_path( &cigar );
-	    self.cigar_vec = Some(cigar.to_vec());
-	    //println!("For this alignement I got this cigar:\n{}\n{}\n", self.to_string(read, database, humming_cut), cig );
-	   #[cfg(debug_assertions)]
-	    if self.debug {
-	    	let (alng1, alng2 ) = self.needleman_wunsch_affine_backtrack( read, database, &cigar );
-	    	println!("Initial cigar string:\n{cig}\n{}\n{}", alng1, alng2 );
-	    	println!("The initial alignement:\n{}", self.int_state_to_string( read, database, &cigar ));
-	    }*/
-
-	    // The alignement is consitently bad at mapping bp around a Deletion/Insertion.
-	    // It is more likely that bp that would match somewhere in the gap are scattered over the gap,
-	    // even if the bp would 100% match the gap start.
-	    // This functionality fixed that issue.
-
-	    // the new setting seams to mainly create DxIx combinations that do not make sense like:
-
-		//"cg-TGTCTCTAGCTGCATATGTAGCAGAga-aTGGCCTAGTCGGCCATCAcTGGGAAGAGAGGCCCC--ttGGTCTTGCAAACTTTATATGC"
-		//"tcgTGTCTCTAGCTGCATATGTAGCAGAaga-TGGCCTAGTCGGCCATCAtTGGGAAGAGAGGCCCCtt--GGTCTTGCAAACTTTATATGC"
-		//"XXDMMMMMMMMMMMMMMMMMMMMMMMMMXXDIMMMMMMMMMMMMMMMMMMXMMMMMMMMMMMMMMMMDDIIMMMMMMMMMMMMMMMMMMMMM"
 		self.cigar.reset_fom_path ( &cigar );
 		self.cigar.fix_di_problems (0, read, database );
 

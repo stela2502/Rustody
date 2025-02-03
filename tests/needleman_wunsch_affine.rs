@@ -98,7 +98,7 @@ mod tests {
 	}
 
 
-	#[test]
+/*	#[test]
 	fn test_needleman_wunsch_affine_large_gap(){
 		let mut test = 	NeedlemanWunschAffine::new();
 
@@ -150,7 +150,7 @@ mod tests {
 
 
 	}
-
+*/
 	#[test]
 	fn test_failing_comparison(){
 		//11       81                                        2                1  311

@@ -299,12 +299,12 @@ impl SingleCellData{
 
 
     /// this will create a path and populate that with 10x kind of files.
-    pub fn write_sparse (&mut self, file_path: PathBuf, genes: &IndexedGenes, min_count:usize) -> Result< String, &str>{
+    pub fn write_sparse (&mut self, file_path: PathBuf, genes: &IndexedGenes, min_count:usize) -> Result< String, String>{
         let names= genes.get_all_gene_names();
         return self.write_sparse_sub( file_path, genes, &names, min_count);
     }
 
-    pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes:&IndexedGenes, names: &Vec<String>, min_count:usize) -> Result<String, &str>{
+    pub fn write_sparse_sub (&mut self, file_path: PathBuf, genes:&IndexedGenes, names: &Vec<String>, min_count:usize) -> Result<String, String>{
             
         let rs = Path::new( &file_path ).exists();
 
@@ -330,7 +330,7 @@ impl SingleCellData{
         let file = match File::create( file_path.join("matrix.mtx.gz") ){
             Ok(file) => file,
             Err(err) => {
-                return Err("Error creating the path?: {err:#?}");
+                return Err(format!("Error creating the path?: {err:#?}"));
             }
         };
         let file1 = GzEncoder::new(file, Compression::default());
@@ -346,7 +346,7 @@ impl SingleCellData{
         let file_b = match File::create( file_path.join("barcodes.tsv.gz") ){
             Ok(file) => file,
             Err(err) => {
-                return Err("Error creating the path?: {err:#?}");
+                return Err(format!("Error creating the path?: {err:#?}"));
             }
         };
         let file2 = GzEncoder::new(file_b, Compression::default());
@@ -356,7 +356,7 @@ impl SingleCellData{
             Ok(_) => (),
             Err(err) => {
                 eprintln!("write error: {err}");
-                return Err("Header could not be written");
+                return Err("Header could not be written".to_string());
             }
         };
 
@@ -365,7 +365,7 @@ impl SingleCellData{
         let file_f = match File::create( file_path.join("features.tsv.gz") ){
             Ok(file) => file,
             Err(err) => {
-                return Err("Error creating the path?: {err:#?}");
+                return Err(format!("Error creating the path?: {err:?}"));
             }
         };
         let file3 = GzEncoder::new(file_f, Compression::default());
@@ -376,7 +376,7 @@ impl SingleCellData{
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}" );
-                    return Err("feature could not be written")   
+                    return Err("feature could not be written".to_string())   
                 }
             }
         }
@@ -398,7 +398,7 @@ impl SingleCellData{
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}");
-                    return Err( "cell barcode could not be written")   
+                    return Err( "cell barcode could not be written".to_string())   
                 }
             };
 
@@ -409,7 +409,7 @@ impl SingleCellData{
                         Ok(_) => { entries += 1; },
                         Err(err) => {
                             eprintln!("write error: {err}");
-                            return Err( "cell data could not be written")
+                            return Err( "cell data could not be written".to_string())
                         }
                     }
                 }

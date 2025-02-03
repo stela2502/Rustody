@@ -1,7 +1,7 @@
 //use crate::traits::Index;
 
 use crate::errors::MappingError;
-use crate::errors::GeneSelectionError;
+//use crate::errors::GeneSelectionError;
 
 use crate::genes_mapper::gene_data::GeneData;
 use crate::genes_mapper::gene_link::GeneLink;
@@ -371,7 +371,7 @@ impl GenesMapper{
 
 	
 
-	fn all_values_same(vec: &[i32]) -> Result<(), GeneSelectionError> {
+/*	fn all_values_same(vec: &[i32]) -> Result<(), GeneSelectionError> {
 		if vec.len() < 3 {
 			return Err(GeneSelectionError::TooView);
 		}
@@ -399,7 +399,8 @@ impl GenesMapper{
 		sorted_counts.sort_by(|&(_, count1), &(_, count2)| count2.cmp(&count1));
 		sorted_counts
 	}
-
+*/
+	#[allow(dead_code)] // needed for debug
 	fn as_dna_string(val:&u16) -> String {
         let mut data = String::new();
         //println!("converting u64 {loc:b} to string with {kmer_size} bp.");
@@ -576,12 +577,9 @@ impl GenesMapper{
 				if let Some(cigar) = val.cigar(){
 					if cigar.mapping_quality() > 20 && cigar.fixed != Some(CigarEndFix::Both) {
 						// so here is where we check if the match did not hit the expected area
-						let mut ret = val.clone();
+						let ret = val.clone();
 						#[cfg(debug_assertions)]
 						println!("I found a best result! {}\nand have fixed the fix_border_insertions", &ret);
-
-						ret.fix_border_insertion( &read_data, &self.genes[val.gene_id() - self.offset] );
-
 						Ok(vec![ret])
 					}else {
 						#[cfg(debug_assertions)]

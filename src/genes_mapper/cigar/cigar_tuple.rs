@@ -2,7 +2,6 @@
 use crate::traits::BinaryMatcher;
 use crate::genes_mapper::cigar::CigarEnum;
 
-use regex::Regex;
 
 use std::fmt;
 

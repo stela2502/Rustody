@@ -437,7 +437,7 @@ impl IntToStr {
 		if self.storage.len() > 1{
 			let tmp = self.shifted +1;
 			self.storage.remove(0);
-			self.regenerate();
+			let _ = self.regenerate();
 			self.shifted = tmp;
 		}
 		else {

@@ -166,7 +166,7 @@ impl CellIds10x{
         for line in reader.lines() {
             if let Ok(sequence) = line {
                 size = sequence.len();
-                tool.from_vec_u8( sequence.as_bytes().to_vec() );
+                let _ = tool.from_vec_u8( sequence.as_bytes().to_vec() );
                 sequences.push( CellId10x( tool.into_u32() ) ) ;
             } else {
                 panic!("I could not read a line in the file!")

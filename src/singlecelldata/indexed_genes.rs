@@ -36,7 +36,7 @@ impl IndexedGenes{
 	}
 
 	/// End pattern match subsetting of the gene names structure
-	pub fn subset(&self, regex: &Regex, offset: usize ) -> IndexedGenes {
+	pub fn subset(&self, regex: &Regex, _offset: usize ) -> IndexedGenes {
         // Use enumerate to build both ids_to_name and names
         let mut new_names = BTreeMap::new();
         let new_ids_to_name: Vec<String> = self

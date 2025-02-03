@@ -128,7 +128,7 @@ impl GeneData{
 	/// This function adds the hard clipped regions (clipped using my slice function) to the cigar string
     pub fn modify_cigar_str( &self, cigar:&str ) -> String {
 
-        let mut ret = if self.dropped_start > 0 {
+        let ret = if self.dropped_start > 0 {
             format!("{}H", self.dropped_start) + cigar
         }else {
             cigar.to_string()
