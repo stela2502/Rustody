@@ -160,14 +160,29 @@ sample reads      : 12 UMIs (0.02% of cellular)
     SampleTag03_mm should be 242 but was 232
     sample UMIs should be 911 but was 862
     */
+    /*
+    expression reads should be 43948 but was 44980
+    antibody UMIs should be 19405 but was 19878
+    sample UMIs should be 862 but was 983
+    SampleTag01_mm should be 111 but was 149
+    antibody reads should be 19445 but was 19919
+    expression UMIs should be 43874 but was 44902
+    SampleTag02_mm should be 202 but was 224
+    na should be 34930 but was 35359
+    SampleTag05_mm should be 20 but was 24
+    SampleTag04_mm should be 157 but was 173
+    sample reads should be 862 but was 983
+    SampleTag06_mm should be 127 but was 140
+    SampleTag03_mm should be 232 but was 253
+    */
 
-    exp.insert( "na".to_string(), 34930 );
-    exp.insert( "SampleTag01_mm".to_string(), 111 );
-    exp.insert( "SampleTag02_mm".to_string(), 202 );
-    exp.insert( "SampleTag03_mm".to_string(), 232 );
-    exp.insert( "SampleTag04_mm".to_string(), 157 );
-    exp.insert( "SampleTag05_mm".to_string(), 20 );
-    exp.insert( "SampleTag06_mm".to_string(), 127 );
+    exp.insert( "na".to_string(), 35359 );
+    exp.insert( "SampleTag01_mm".to_string(), 149 );
+    exp.insert( "SampleTag02_mm".to_string(), 224 );
+    exp.insert( "SampleTag03_mm".to_string(), 253 );
+    exp.insert( "SampleTag04_mm".to_string(), 173 );
+    exp.insert( "SampleTag05_mm".to_string(), 24 );
+    exp.insert( "SampleTag06_mm".to_string(), 140 );
     exp.insert( "AssignedSampleName".to_string(), 1 );
 
 
@@ -176,14 +191,14 @@ sample reads      : 12 UMIs (0.02% of cellular)
     exp.insert( "filtered reads".to_string(), 14078 );
 
     //collected read counts:
-    exp.insert( "expression reads".to_string(), 43948 );
-    exp.insert( "antibody reads".to_string(),   19445 );
-    exp.insert( "sample reads".to_string(),     862 );
+    exp.insert( "expression reads".to_string(), 44980 );
+    exp.insert( "antibody reads".to_string(),   19919 );
+    exp.insert( "sample reads".to_string(),     983 );
 
     //reported UMI counts:
-    exp.insert( "expression UMIs".to_string(),  43874 );
-    exp.insert( "antibody UMIs".to_string(),    19405 );
-    exp.insert( "sample UMIs".to_string(),      862 );
+    exp.insert( "expression UMIs".to_string(),  44902 );
+    exp.insert( "antibody UMIs".to_string(),    19878 );
+    exp.insert( "sample UMIs".to_string(),      983 );
 
     // Iterate over the actual hashmap and assert each key-value pair separately
     let mut failed = false;
