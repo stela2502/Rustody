@@ -14,7 +14,16 @@ You can inspect the state of the program using this [deatiled comparison between
 
 ## News
 
-### latest
+### 2.2.4
+
+The mapping process is still kind of slow, the sam output looks promising.
+I have managed to clean up the mappings enough to hopefully be able to look into mutations next.
+
+The text later on with ./target/release/genomic_mapper and the mouse ChrM index testData/ChrM_MouseIdx leads to ~12% of not perfect Cigar entries.
+Way way more as the ZERO% that STAR does produce.
+
+
+### 2.2.2
 
 This is not functional any more. The mapper is EXTREMELY inefficient.
 And I do not have the time to fix that.
@@ -149,16 +158,18 @@ target/release/quantify_gene_mapper -r  testData/1e5_mRNA_S1_R1_001.fastq.gz -f 
 ```
 
 Bummer - the gene_mapper version of my tool is way slower (50x!!) than the fast_mapper one - but the results should be lot more reliable!
+But at least it'S gotten slightly faster with the last version.
+And the Cigar package has become really good now.
 
 ```
-tis 14 maj 2024 14:21:05 CEST
+tis  4 feb 2025 15:41:09 CET
 
 writing gene expression
-sparse Matrix: 73 cell(s), 99 gene(s) and 428 entries written to path Ok("testData/output_1e5/BD_Rhapsody_expression"); 
+sparse Matrix: 77 cell(s), 100 gene(s) and 452 entries written to path Ok("testData/output_1e5_gm/BD_Rhapsody_expression"); 
 Writing Antibody counts
-sparse Matrix: 73 cell(s), 5 gene(s) and 106 entries written to path Ok("testData/output_1e5/BD_Rhapsody_antibodies"); 
+sparse Matrix: 77 cell(s), 5 gene(s) and 115 entries written to path Ok("testData/output_1e5_gm/BD_Rhapsody_antibodies"); 
 Writing samples table
-dense matrix: 73 cell written
+dense matrix: 77 cell written
 
 Summary:
 cellular   reads  : 68556 reads (68.56% of total)
@@ -173,27 +184,28 @@ filtered   reads  : 14078 reads (14.08% of total)
 total      reads  : 100000 reads
 
 collected read counts:
-expression reads  : 44166 reads (64.42% of cellular)
-antibody reads    : 19429 reads (28.34% of cellular)
-sample reads      : 862 reads (1.26% of cellular)
+expression reads  : 44980 reads (65.61% of cellular)
+antibody reads    : 19919 reads (29.06% of cellular)
+sample reads      : 983 reads (1.43% of cellular)
 
 reported UMI counts:
-expression reads  : 540 UMIs (0.79% of cellular)
-antibody reads    : 329 UMIs (0.48% of cellular)
-sample reads      : 9 UMIs (0.01% of cellular)
+expression reads  : 570 UMIs (0.83% of cellular)
+antibody reads    : 349 UMIs (0.51% of cellular)
+sample reads      : 12 UMIs (0.02% of cellular)
 
-PCR duplicates or bad cells: 67678 reads (98.72% of cellular)
+PCR duplicates or bad cells: 67625 reads (98.64% of cellular)
 
 timings:
-   overall run time 0 h 0 min 25 sec 518 millisec
-   file-io run time 0 h 0 min 0 sec 248 millisec
-single-cpu run time 0 h 0 min 0 sec 98 millisec
- multi-cpu run time 0 h 0 min 25 sec 130 millisec
+   overall run time 0 h 0 min 17 sec 835 millisec
+   file-io run time 0 h 0 min 0 sec 237 millisec
+single-cpu run time 0 h 0 min 0 sec 62 millisec
+ multi-cpu run time 0 h 0 min 17 sec 495 millisec
 
 
-Cell->Sample table written to "testData/output_1e5/SampleCounts.tsv"
+Cell->Sample table written to "testData/output_1e5_gm/SampleCounts.tsv"
 
-quantify_rhapsody finished in 0h 0min 25 sec 519milli sec
+quantify_rhapsody finished in 0h 0min 17 sec 840milli sec
+
 ```
 
 With this new gene_mapper model you now get a sam file together with your fasta data:
@@ -210,6 +222,13 @@ Or want to test the 10x version of the tool (which is a LOT slower!):
 Here the most interesting is the sam file that will also be produced in the newest version: ``testData/10x/results/AlignedReadsOfInterest.sam``. I hope this will help to look into chrM cell tagging.
 ```
 ./target/release/quantify_gene_mapper -e testData/chrM_GRCm39.primary_assembly.genome.fa.gz -r testData/10x/1k_mouse_kidney_CNIK_3pv3_S1_L004_R1_4m.fastq.gz  -f testData/10x/1k_mouse_kidney_CNIK_3pv3_S1_L004_R2_4m.fastq.gz -o testData/10x/results/ --exp 10x --specie human --min-umi 20 --version "Single Cell 3' v3" --report4genes chrM --highest-nw-val 0.25  --chunk-size 10000
+
+.
+.
+.
+
+quantify_rhapsody finished in 0h 0min 30 sec 600milli sec
+
 ```
 
 [An example analysis of the fast_mapper based analys data is available here:]( ./testData/BD_results/CombinedAnalysis_scanpy_v1.2.1.ipynb).

@@ -412,7 +412,7 @@ impl AnalysisGeneMapper{
 	            	// a sample id match
 	            	// or a mRNA match
 	            	// And of casue not a match at all
-	            	println!("processing the read\n{}", &data[i].1);
+	            	//println!("processing the read\n{}", &data[i].1);
 
 	            	ok = match &self.antibodies.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32, &mut nwa ){
 	                    Ok(gene_id) =>{
@@ -730,6 +730,7 @@ impl AnalysisGeneMapper{
 		        report.stop_multi_processor_time();
 		        //eprintln!("Merge time");
 			    for gex in total_results{
+			    	#[cfg(debug_assertions)]
 			    	println!("I merge a SingelCellData object into my own main object:\n{}into:\n{}", &gex.0.0, &self.gex);
 			    	self.gex.merge(gex.0.0);
 			    	for line in gex.0.1{
@@ -841,10 +842,13 @@ impl AnalysisGeneMapper{
 	    results.stop_file_io_time();
 
 	    let genes_idx = &self.genes.as_indexed_genes();
+	    #[cfg(debug_assertions)]
 	    println!("Indexed the genes names");
 	    let ab_idx = &self.antibodies.as_indexed_genes();
+	    #[cfg(debug_assertions)]
 	    println!("Indexed the antibody names");
 	    let samples_idx = &self.samples.as_indexed_genes();
+	    #[cfg(debug_assertions)]
 	    println!("Indexed the samples names");
 	    
 	    println!("filtering cells");
@@ -852,6 +856,7 @@ impl AnalysisGeneMapper{
 	    self.gex.mtx_counts( genes_idx, min_umi, self.gex.num_threads ) ;
 	    
 	    results.stop_multi_processor_time();
+
 	    println!("writing gene expression");
 
 	    match self.gex.write_sparse_sub ( file_path_sp, genes_idx , &self.gene_names, min_umi ) {
