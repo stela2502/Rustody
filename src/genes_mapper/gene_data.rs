@@ -50,7 +50,7 @@ pub struct GeneData {
 	/// keep track of how many bp have been sliced from this entry's start
 	dropped_start:usize,
 	/// keep track of how many bp have been sliced from this entry's end
-	dropped_end:usize,
+ 	dropped_end:usize,
 }
 
 impl Hash for GeneData {
@@ -460,7 +460,7 @@ impl BinaryMatcher for GeneData{
     }
 
     fn get_dropped_values(&self) -> ( usize, usize){
-    	( self.dropped_start, self.dropped_end)
+    	( self.start, self.dropped_end)
     }
 
     fn as_str(&self, start:usize, length:usize ) -> Option<String>{
@@ -481,9 +481,12 @@ impl BinaryMatcher for GeneData{
         // Check the current nucleotide and the previous two nucleotides in the sequence
         if index > self.len() {
         	// a buffer overflow likely - 
-        	return false;
+        	false
         }
-        if let (Some(curr), Some(prev1), Some(prev2), Some(prev3) ) = (
+     	else if index < 3 {
+     		false
+     	}
+        else if let (Some(curr), Some(prev1), Some(prev2), Some(prev3) ) = (
             self.get_nucleotide_2bit(index),
             self.get_nucleotide_2bit(index - 1), // previous nucleotide
             self.get_nucleotide_2bit(index - 2), // two nucleotides before

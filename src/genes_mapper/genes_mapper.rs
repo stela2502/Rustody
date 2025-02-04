@@ -370,36 +370,6 @@ impl GenesMapper{
 	}
 
 	
-
-/*	fn all_values_same(vec: &[i32]) -> Result<(), GeneSelectionError> {
-		if vec.len() < 3 {
-			return Err(GeneSelectionError::TooView);
-		}
-		if let Some(first) = vec.first() {
-			if vec.iter().all(|x| x == first){
-				Ok(())
-			}else {
-				Err(GeneSelectionError::NotSame)
-			}
-		} else {
-	        // If the vector is empty, technically all values are the same (trivially true)
-	        // but useless here as filtered out before
-	        Err(GeneSelectionError::TooView) // this should not be checked - too bad an initial match!!
-	    }
-	}
-
-	/// this will return a sorted vector of (<start on source>:i32, count:usize)
-	/// Highest counts first
-	fn table(vec: &[i32]) -> Vec<(i32,usize)>{
-		let count_map = vec.iter().fold(HashMap::new(), |mut map, &val| { 
-			*map.entry(val).or_insert(0) += 1; 
-			map 
-		});
-		let mut sorted_counts: Vec<_> = count_map.into_iter().collect();
-		sorted_counts.sort_by(|&(_, count1), &(_, count2)| count2.cmp(&count1));
-		sorted_counts
-	}
-*/
 	#[allow(dead_code)] // needed for debug
 	fn as_dna_string(val:&u16) -> String {
         let mut data = String::new();
@@ -530,35 +500,30 @@ impl GenesMapper{
 					println!("the alignement:\n{}",nwa.to_string( &read, &database, self.highest_humming_val ));
 				}
 
-				if nw.abs() < self.highest_nw_val  {
-
-					cigar.reset_fom_path( &nwa.cigar_vec() );
-					cigar.clean_up_cigar(&read, &database);
-
+				if nwa.cigar.mapping_quality() > 20 && nwa.cigar.state_changes() < 10 ||  
+					nwa.cigar.mapping_quality() > 30 && nwa.cigar.state_changes() < 15 {
 
 					#[cfg(debug_assertions)]
 					if self.debug{
 						println!("##################\n################## And I deem this match interesting\n##################");
 					}
-					if cigar.mapping_quality() > 20 && cigar.state_changes() < 10  {
-						helper.push( 
-							MapperResult::new( 
-									*gene_id + self.offset, *start.max(&0) as usize, 
-								true, Some(cigar.clone()), 
-								cigar.mapping_quality(), *nw, (nw*read.len() as f32) as usize,
-								cigar.edit_distance(), self.genes[*gene_id].get_name(), self.genes[*gene_id].len()
-							)
-						);
-					}
-
-					cigar.clear();
+					
+					helper.push( 
+						MapperResult::new( 
+								*gene_id + self.offset, *start.max(&0) as usize, 
+							true, Some(nwa.cigar()), 
+							nwa.cigar.mapping_quality(), *nw, (nw*read.len() as f32) as usize,
+							nwa.cigar.edit_distance(), self.genes[*gene_id].get_name(), self.genes[*gene_id].len()
+						)
+					);
+					
 				}else {
-					cigar.clear();
 					crappy_mappings = true;
 					if helper.len() > 0 {
 						break
 					}
 				}
+				nwa.cigar.clear();
 			};			
 
 		} // end populating helper

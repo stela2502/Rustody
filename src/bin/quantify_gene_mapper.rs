@@ -81,6 +81,9 @@ struct Opts {
     /// report the reads matching to a set of genes?
     #[clap(long)]
     report4genes: Option<String>,
+    /// create a MASS of debug info
+    #[clap(short, long)]
+    debug: bool,
 }
 
 /*
@@ -175,7 +178,7 @@ fn main() {
 
     // wants gene_kmers:usize, version:String, expression:String, antibody:String, specie:String
     let mut worker = AnalysisGeneMapper::new( opts.gene_kmers, opts.version, opts.expression,
-        opts.antibody, opts.specie, opts.index, num_threads, &opts.exp, false);
+        opts.antibody, opts.specie, opts.index, num_threads, &opts.exp, opts.debug);
 
     if let Some(genes) = opts.report4genes{
         let slice_str: Vec<&str> = genes.split_whitespace().collect();

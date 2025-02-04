@@ -14,7 +14,7 @@ pub struct NeedlemanWunschAffine{
 	dp: Vec<Vec<i32>>,
 	n: usize,
 	m: usize,
-	cigar: Cigar,
+	pub cigar: Cigar,
 	//circles:usize,
 	debug:bool,
 }
@@ -328,10 +328,12 @@ impl <'a> NeedlemanWunschAffine {
 		    if rev_id > 0 {
 		    	rev_id -= 1;
 		    } else if i > 0 || j > 0  {
-		    	// we have etimated the wrong path length!
+		    	// we have estimated the wrong path length!
+		    	//eprintln!( "You tried to match a read to a database entry where the lenth of both entries did not fit! This needs to be improved on!\n{}\n{}\ni:{}; j:{}",
+		    	//	read, database, i , j);
 		    	cigar.insert(0, CigarEnum::Empty);
 		    	#[cfg(debug_assertions)]
-		    	println!("Inserting a new CigarEnum::Empty at position 0 (i:{i}; j:{j}");
+		    	println!("Inserting a new CigarEnum::Empty at position 0 (i:{i}; j:{j})");
 		    	//self.debug = true;
 		    }   
 	    }
@@ -340,10 +342,11 @@ impl <'a> NeedlemanWunschAffine {
 	    	panic!("We have not filled in all the values here!?!?");
 	    }
 
-		
 		self.cigar.reset_fom_path ( &cigar );
 		self.cigar.fix_di_problems (0, read, database );
-
+		
+		( self.cigar.dropped_start, self.cigar.dropped_end ) = read.get_dropped_values();
+		
 	    //println!("{}", cig.as_alignement( read, database ) );
 
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]

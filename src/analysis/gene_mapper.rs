@@ -85,6 +85,7 @@ pub struct AnalysisGeneMapper{
 	gene_names:Vec<String>,
 	ab_names:Vec<String>,
 	num_threads:usize,
+	debug: bool,
 }
 
 
@@ -92,8 +93,8 @@ impl AnalysisGeneMapper{
 
 
 	pub fn new(_gene_kmers:usize, version:String, expression:Option<String>, 
-		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str, _debug:bool  ) -> Self{
-		//let sub_len = 9;
+		antibody:Option<String>, specie:String, index:Option<String>, num_threads:usize, exp:&str, debug:bool  ) -> Self{
+		//let sub_len = 9
 	    //let mut cells = SampleIds::new( sub_len );// = Vec::with_capacity(12);
 	    //cells.init_rhapsody( &opts.specie );
 
@@ -129,9 +130,9 @@ impl AnalysisGeneMapper{
 	    eprintln!("Changing the expression start gene id to {}", genes.get_gene_count() );
 	    let mut antibodies :GenesMapper = GenesMapper::new( genes.get_gene_count()  );
 
-	    /*if debug {
+	    if debug {
 	    	antibodies.debug(Some(debug));
-	    }*/
+	    }
 
 	    if let Some(ab) = antibody {
 
@@ -277,6 +278,7 @@ impl AnalysisGeneMapper{
 			gene_names,
 			ab_names,
 			num_threads,
+			debug,
 		}
 	}
 
@@ -410,6 +412,7 @@ impl AnalysisGeneMapper{
 	            	// a sample id match
 	            	// or a mRNA match
 	            	// And of casue not a match at all
+	            	println!("processing the read\n{}", &data[i].1);
 
 	            	ok = match &self.antibodies.get_strict( &data[i].1.seq().to_vec(), *cell_id as u32, &mut nwa ){
 	                    Ok(gene_id) =>{
@@ -721,7 +724,9 @@ impl AnalysisGeneMapper{
 		    	    }) // Analyze each chunk in parallel
 		        .collect(); // Collect the results into a Vec
 		        //eprintln!("sum up temp results");
-
+		        if self.debug {
+		        	println!("gene_mapper::parse_parallel - starting to collect the results")
+		        }
 		        report.stop_multi_processor_time();
 		        //eprintln!("Merge time");
 			    for gex in total_results{
@@ -736,6 +741,9 @@ impl AnalysisGeneMapper{
 			    	}
 			       	report.merge( &gex.1 );
 			    }
+			    if self.debug {
+		        	println!("gene_mapper::parse_parallel - starting to cleaning up")
+		        }
 			    //eprintln!("Collecting more reads");
 			    good_reads.clear();
 			    //println!("{}", report.log_str());
@@ -743,6 +751,9 @@ impl AnalysisGeneMapper{
 			    let log_str = report.log_str();
 		        pb.set_message( log_str.clone() );
 		        report.write_to_log( log_str );
+		        if self.debug {
+		        	println!("gene_mapper::parse_parallel - finished")
+		        }
 			}
 			report.log(&pb);
 		}

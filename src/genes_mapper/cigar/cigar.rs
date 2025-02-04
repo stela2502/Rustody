@@ -46,9 +46,9 @@ pub struct Cigar{
 	/// state_changes is a measure of quality for a Cigar - the more changes the less likely that this is real.
 	state_changes: usize,
 	/// keep track of how many bp have been sliced from this entry's start
-	dropped_start:usize,
+	pub dropped_start:usize,
 	/// keep track of how many bp have been sliced from this entry's end
-	dropped_end:usize,
+	pub dropped_end:usize,
 
 }
 
@@ -223,12 +223,20 @@ impl Cigar{
 	fn neg_look_ahead<T>( &self, read:&T, database:&T, pos_r: usize, pos_d:usize ) -> usize
 	where
     T: BinaryMatcher{
-		let mut ret = 0;
-		while  read.get_nucleotide_2bit( pos_r - ret ) ==  database.get_nucleotide_2bit( pos_d - ret ) {
-			ret += 1;
+		let mut ret = pos_r;
+		let mut pos_d2 = pos_d;
+		while ret >= 0 && pos_d2 >= 0 && read.get_nucleotide_2bit( ret ) ==  database.get_nucleotide_2bit(  pos_d2 ) {
+			if ret == 0 || pos_d2 == 0 {
+				if ret > 0 {
+					ret -=1; // that is important to get the correct size reported!
+				}
+				break;
+			}
+			ret -= 1;
+			pos_d2 -=1;
 		}
 		//println!("searching for neg_look_ahead from pos_r {pos_r} and pos_d {pos_d} found {ret} overlaps");
-		ret
+		pos_r - ret 
 	}
 
 
@@ -375,6 +383,51 @@ impl Cigar{
     	format!("Cigar String: {}\n{}\n{}\n{}\n{}\n{}",self.cigar, tens, ones, a, b , cigar )
     }
 
+    fn check_alignment<T: BinaryMatcher>(&mut self, read:&T, database:&T) {
+
+    	let mut changed = false;
+    	let mut enum_vec = self.string_to_vec( &self.cigar );
+    	let mut pos_a = 0;
+    	let mut pos_b = 0;
+    	for mut operation in enum_vec.iter_mut()  {
+
+    		match operation{
+    			CigarEnum::Match => {
+					if ( self.get_nucleotide_2bit( read.get_nucleotide_2bit(pos_a) ) 
+						!= 
+						self.get_nucleotide_2bit( database.get_nucleotide_2bit(pos_b) )) {
+						*operation = CigarEnum::Mismatch;
+						changed = true;
+					}
+					pos_a +=1;
+					pos_b +=1;
+    			},
+				CigarEnum::Mismatch => {
+					//"X",
+					if self.get_nucleotide_2bit( read.get_nucleotide_2bit(pos_a) )
+					   ==
+					   self.get_nucleotide_2bit( database.get_nucleotide_2bit(pos_b) ) {
+						*operation = CigarEnum::Match;
+						changed = true;
+					}
+    				pos_a +=1;
+    				pos_b +=1;
+				},
+				CigarEnum::Insertion => {
+					pos_a += 1; // Insertion advances only read position
+				},
+				CigarEnum::Deletion => {
+					pos_b += 1; // Deletion advances only database position
+				},
+				CigarEnum::Empty => panic!("There is an empty cigar entry in your vector!"),
+    		}
+    	}
+
+    	if changed {
+    		self.reset_fom_path( &enum_vec.clone()) ;
+    	}
+    }
+
     pub fn to_sam_string(&self) -> (String,  usize ){
     	let mut ret = self.cigar.to_string();
 
@@ -473,9 +526,9 @@ impl Cigar{
     			// there are never two entries of the same type after each other
     			// and as there are only Insertion and Deletion elements they need to be either one of them
     			cigar_tuple_vec[id].is_gap() 
-    			&& cigar_tuple_vec[id-1].is_gap() 
+    			&& cigar_tuple_vec[id.saturating_sub(1)].is_gap() 
     			// and the length of both of them needs to be the same
-    			&& cigar_tuple_vec[id].len() == cigar_tuple_vec[id-1].len() 
+    			&& cigar_tuple_vec[id].len() == cigar_tuple_vec[id.saturating_sub(1)].len() 
     			{
     				//let len = cigar_tuple_vec[id].len();
 
@@ -483,12 +536,12 @@ impl Cigar{
     					CigarEnum::Insertion => {
     						( 
     							cigar_tuple_vec[id].slice_from_read(read),
-    							cigar_tuple_vec[id-1].slice_from_database(database),
+    							cigar_tuple_vec[id.saturating_sub(1)].slice_from_database(database),
     							)
     					},
     					CigarEnum::Deletion =>{
     						( 
-    							cigar_tuple_vec[id-1].slice_from_read(read),
+    							cigar_tuple_vec[id.saturating_sub(1)].slice_from_read(read),
     							cigar_tuple_vec[id].slice_from_database(database),
     							)
     						
@@ -497,8 +550,12 @@ impl Cigar{
     						panic!("{} is not a gap!", cigar_tuple_vec[id])
     					}
     				};
-    				//println!("Foud a DI or ID problem! at read pos {:?} database_pos {:?}", on_read, on_db );
-    				//cigar_tuple_vec[id].print_debug();
+    				#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+    				{
+    					println!("Foud a DI or ID problem! at read pos {:?} database_pos {:?}", on_read, on_db );
+    					cigar_tuple_vec[id].print_debug();
+    				}
+    				
 
     				if on_read == on_db  {
     					//println!("And they even had the same nucleotides");
@@ -601,16 +658,17 @@ impl Cigar{
 					}
 				}
 			}
-
-			/*let mut cig = "".to_string();
-    		for  entry in &mut *cigar_tuple_vec{
-    			cig += &entry.to_string();
-    		}
-    		let mut report = self.clone();
-    		report.restart_from_cigar( &cig );
-    		println!("             updated: {matches} with this == {this} and flip_back {flip_back}");
-			println!("Intermediate alignement at {this}; {}:\n{}", cigar_tuple_vec[this], report.as_alignement( read, database) );
-			*/
+			#[cfg(all(debug_assertions, feature = "detailed_mapping_debug"))]
+			{
+				let mut cig = "".to_string();
+	    		for  entry in &mut *cigar_tuple_vec{
+	    			cig += &entry.to_string();
+	    		}
+	    		let mut report = self.clone();
+	    		report.restart_from_cigar( &cig );
+	    		println!("             updated: {matches} with this == {this} and flip_back {flip_back}");
+				println!("Intermediate alignement at {this}; {}:\n{}", cigar_tuple_vec[this], report.as_alignement( read, database) );
+			}
 		}
 		// so let's see if we need to re-introduce some
 		let flip_to =  match kill {
@@ -627,9 +685,24 @@ impl Cigar{
 				this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
 				skip +=1;
 			}else if cigar_tuple_vec[this].option.opposite(&flip_to) {
-				flip_back -= cigar_tuple_vec[this].vec_len as i32;
+				if flip_back > cigar_tuple_vec[this].vec_len as i32{
+					flip_back -= cigar_tuple_vec[this].vec_len as i32;
+					cigar_tuple_vec[this].vec_len = 0;
+				}else {
+					// crap - we can not kill all of that, but need to spliot this, too!
+					match cigar_tuple_vec[this].split_at( flip_back.try_into().unwrap(), CigarEnum::Empty ){
+						Some(new_fragment) => {
+							// this is the empty one - so we can savely ignore that one ;-)
+							flip_back = 0;
+						},
+						None => {
+							panic!("We tried to remove part of an opposite gap as the last step of our process!\nAnd failed!\n{}", 
+								self.as_alignement( read, database)
+								);
+						}
+					}
+				}
 				
-				cigar_tuple_vec[this].vec_len = 0;
 				this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
 				skip +=1;
 
@@ -671,15 +744,17 @@ impl Cigar{
 				break;
 			}
 		}
+		
 		let mut cig =  Vec::<CigarEnum>::with_capacity( cigar_tuple_vec.iter().map(|v| v.len()).sum::<usize>() );
-    	cigar_tuple_vec.iter().for_each(|v| v.extend_vec( &mut cig ) );
+	    cigar_tuple_vec.iter().for_each(|v| v.extend_vec( &mut cig ) );
 
 		self.clear();
 		self.reset_fom_path( &cig );
+		self.check_alignment( read, database);
 
-		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		#[cfg(all(debug_assertions, feature = "detailed_mapping_debug"))]
 		println!("####################################\nAfter the fix I got the alignement:\n{}\n####################################", self.as_alignement(read, database));
-
+		
 		return Ok( skip + added +1 );
 	}
 
@@ -694,6 +769,8 @@ impl Cigar{
     		//let mut cigar_vec = self.to_vec();
     		//let mut skipped = skip;
 
+    		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+    		println!("Strting alignement:\n{}", self.as_alignement( read, database) );
     		let mut cigar_tuple_vec = self.to_cigar_tupel_vec( false );
     		if skip >= cigar_tuple_vec.len() -2 {
     			return;
@@ -701,6 +778,12 @@ impl Cigar{
     		for id in (1..cigar_tuple_vec.len()-1).rev().skip( skip ) {
 				//skipped +=1;
     			if ! cigar_tuple_vec[id].is_gap(){
+    				continue;
+    			}else if cigar_tuple_vec[id].len() == 0{
+    				continue;
+    			}else if cigar_tuple_vec[id].database_position == 0 {
+    				// this should not be worked on!
+    				// need to change the lib!
     				continue;
     			}
     			let current_tuple = cigar_tuple_vec[id].clone();
@@ -710,7 +793,7 @@ impl Cigar{
     					( current_tuple.read_position + current_tuple.len() - 1 , current_tuple.database_position - 1 )
     				},
     				CigarEnum::Deletion =>  {
-    					( current_tuple.read_position - 1, current_tuple.database_position + current_tuple.len() - 1 )
+    					( current_tuple.read_position -1, current_tuple.database_position + current_tuple.len() -1 )
     				},
     				_ => {
     					panic!("This is no gap enum: {}", current_tuple.option );
