@@ -308,8 +308,7 @@ impl GenesMapper{
 	        }
 	    }
 	}
-
-	/// slice the read and the database to get the likely matching regions from both.
+		/// slice the read and the database to get the likely matching regions from both.
 	fn slice_objects ( &self, start:i32, change_end: &GeneData, change_start: &GeneData ) -> Option<( GeneData, GeneData )> {
 		
 		let abs_start = start.abs() as usize;
@@ -331,13 +330,12 @@ impl GenesMapper{
 						return None
 					},
 				};
-
 				#[cfg(debug_assertions)]
 				{
 					println!("GenesMapper::slice_objects - slicing with start <0 {start} and \n{change_start}\nand\n{change_end}");
 					println!("GenesMapper::slice_objects - I got you this return values:\n{obj_b}\n{obj_a}\ngood?\n")
 				}
-				Some((obj_b, obj_a))
+				Some((obj_a, obj_b))
 			},
 			false => {
 				let obj_a = match change_start.slice( abs_start, (change_start.len() - abs_start ).min( change_end.len() )){
@@ -363,6 +361,50 @@ impl GenesMapper{
 			}
 		}	
 	}
+	/*/// Slice the read and database to get the likely matching regions from both.
+    fn slice_objects(
+        &self,
+        min_start: i32,
+        read: &GeneData,
+        database: &GeneData,
+    ) -> Option<(GeneData, GeneData)> {
+        let abs_start = min_start.abs() as usize;
+
+        // Determine which object to slice first based on min_start
+        let (primary, secondary) = if min_start < 0 {
+            (database, read)
+        } else {
+            (read, database)
+        };
+
+        // Compute slice range for primary object
+        if primary.len() < abs_start {
+        	return None;
+        }
+        #[cfg(debug_assertions)]
+        println!("primary.slice({abs_start}, {})",(primary.len() - abs_start).min(secondary.len()) );
+
+        let primary_sliced = primary.slice(abs_start, (primary.len() - abs_start).min(secondary.len())  )?;
+        
+        // Compute slice range for secondary object (matching length)
+        let secondary_sliced = secondary.slice(0, primary_sliced.len().min(primary_sliced.len()))?;
+
+        #[cfg(debug_assertions)]
+        {
+            println!(
+                "GenesMapper::slice_objects - Slicing with start={}",
+                min_start
+            );
+            println!("primary_sliced  : {:?}", primary_sliced.as_dna_string());
+            println!("secondary_sliced: {:?}", secondary_sliced.as_dna_string());
+        }
+		if min_start < 0{
+			Some((secondary_sliced, primary_sliced))
+		}else {
+			Some((primary_sliced, secondary_sliced))
+		}
+        
+    }*/
 
 	/// purge single 16bp fragments that link to more than max_links different positions.
 	pub fn purge(&mut self, max_links:usize ) {

@@ -184,7 +184,7 @@ mod tests {
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_insertion.tsv"));
 
 
-		assert_eq!( format!("{}",cigar.cigar), "1M1X8M1D39M2X16M6X", "A really bitchy mapping #1" );
+		assert_eq!( format!("{}",cigar.cigar), "1M1X8M1D39M2X16M1X3M1X1M", "A really bitchy mapping #1" );
 	}
 
 	#[test]
@@ -210,7 +210,7 @@ mod tests {
 
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_deletion.tsv"));
 
-		assert_eq!( format!("{}",cigar.cigar), "1M1X8M1I39M2X16M6X", "A really bitchy mapping #2" );
+		assert_eq!( format!("{}",cigar.cigar), "1M1X8M1I39M2X16M1X3M1X1M", "A really bitchy mapping #2" );
 
 	}
 

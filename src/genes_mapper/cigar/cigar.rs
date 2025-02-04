@@ -590,7 +590,7 @@ impl Cigar{
     	self.fix_next_gap_location( read, database, 0 );
 		
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-		println!("Fixed DI problems locations in this alignement:\n{}\n{self}", self.as_alignement(read, database) );
+		println!("Fixed DI problems locations in this alignement:\n{}\n{self}\n######################################", self.as_alignement(read, database) );
 		self.fixed = Some( CigarEndFix::Na );
 	}
 
