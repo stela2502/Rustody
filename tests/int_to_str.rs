@@ -248,7 +248,7 @@ mod tests {
      tool.to_string( 2, &mut decoded);
      assert_eq!( decoded, "CT".to_string() );
 
-     tool.regenerate();
+     let _ = tool.regenerate();
      // println!("If this is not followed by a three columns table we have a pporoblem!");
      // while let Some(t) = tool.next(){
      //     println!("{} {} {}", t.0, t.1, t.2);

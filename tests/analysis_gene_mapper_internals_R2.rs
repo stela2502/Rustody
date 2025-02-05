@@ -19,6 +19,7 @@ mod tests {
 		// that contains a cell id for the version of the bd tool
 		let r1 = SeqRec::new( b"SomeRead1", b"AGGAGATTAACTGGCCTGCGAGCCTGTTCAGGTAGCGGTGACGACTACATATGCTGCACATTTTTT", b"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" );
 	    // a read for the seq you wanted analyzed
+	    #[allow(unused_variables)]
 	    let qual: Vec<u8>  = vec![b'F'; seq.len()];
 	    let r2 = SeqRec::new( b"SomeRead2", seq, qual.as_slice() );
 	    let data= vec![ (r1, r2 )];
@@ -27,7 +28,7 @@ mod tests {
 	    match err{
 	    	Some(e) => {
 	    		assert_eq!( single_cell_data.is_empty(), true, "no results in the data object");
-	    		assert_eq!( sam_strings.len(), 0, "I go no result for the search" );
+	    		assert_eq!( sam_strings.len(), 0, "I go no result for the search: {:?}", e );
 	    	},
 	    	None=> {
 	    		assert_eq!( single_cell_data.is_empty(), false, "there no result in the data object and I expected '{sam_line:?}'");
@@ -74,7 +75,7 @@ mod tests {
 		// start and end of the 'contig'
 		//          eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeesssssssssssssssssssssssssss
 		let seq = b"ATGTATGTTGTAGCTCCTCAAATAAATTTGTTCCAGCATTAgcactctcacttactaagcATGTTCTA";
-		let bam_line= "SomeRead2\t0\t";
+		//let bam_line= "SomeRead2\t0\t";
 		test_this_seqence( seq, database, None, Some(MappingError::NoMatch) );
 	}
 
@@ -136,7 +137,7 @@ mod tests {
 
     //insertion/deletion border cases
     #[test]
-    fn insert_start_R2() {
+    fn insert_start_r2() {
     	// start Insert ENSMUST00000005017 Hdgf
     	let seq = b"TTGGTCTCTGGTGTTTTCTCACATCCAGTTTGTAGCCCACTAAGAATACAGGGAAAGTGTCCTCCAGCCTCTTCTAGTGGTTTCTTACA";
     	let database = "testData/Hdgf.fasta.gz".to_string();
@@ -144,7 +145,7 @@ mod tests {
 		test_this_seqence( seq, database, Some(bam_line), None );
     }
     #[test]
-    fn insert_end_R2() {
+    fn insert_end_r2() {
     	// end Insert ENSMUST00000026565 Ifitm3
     	let seq = b"ACCTTGGTCCTCAGCATCCTGATGGTTGTTATCACCATTGTTAGTGTCATCATCATTGTTCTTAACGCTCAAAAACCTTCACACTTAAT";
     	let database = "testData/Ifitm3.fasta.gz".to_string();
@@ -154,10 +155,12 @@ mod tests {
     #[test]
     fn deletion_start() {
     	// start deletion ENSMUST00000109641 Sec61g
+        //   db = b"ATTATTGTGGGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTGTGTGGTGT";
 		let seq = b"ATTATTGTGGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG";
 		//let database = "testData/Sec61g.fasta.gz".to_string();
 		let database = "testData/ENSMUST00000109641.fasta.gz".to_string();
-		let bam_line= "SomeRead2\t0\tENSMUST00000109641\t286\t34\t12X77M\t*\t0\t0\tATTATTGTGGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:34\tnM:i:0.13483146\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
+		let bam_line= "SomeRead2\t0\tENSMUST00000109641\t286\t39\t1S7M1D81M\t*\t0\t0\tATTATTGTGGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:39\tnM:i:0.022222223\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
+		            //  "SomeRead2\t0\tENSMUST00000109641\t286\t34\t1S7M1D76M\t*\t0\t0\tATTATTGTGGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:34\tnM:i:0.13483146\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
 		test_this_seqence( seq, database, Some(bam_line), None );
     }
 	#[test]

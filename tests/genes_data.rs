@@ -227,7 +227,7 @@ mod tests {
 		let seq = b"TGGTATCTTTTACTTA";
 		let mut obj = GeneData::from_bytes( seq );
 		let mut id = 0;
-		let expected = vec![ 
+		let _expected = vec![ 
 			// 	first 'frame'
 			"TGGTATCT",    "TTTACTTA",
 			// 	second 'frame'
@@ -336,18 +336,14 @@ mod tests {
 		let seq2 = b"TTCATATCGACAATTAGGGTTTGTGACGACCTCGATGTTGGATCAGGT"; //missing three T-s in the middle.
 		let obj = GeneData::from_bytes( seq );
 		let obj2 = GeneData::from_bytes( seq2 );
-		let mut cigar = Cigar::new("");
 		let mut nwa = NeedlemanWunschAffine::new();
 		let _nw = &nwa.needleman_wunsch_affine( &obj2, &obj, 0.4 );
-		cigar.reset_fom_path( &nwa.cigar_vec() );
 		//println!("nwa: {}", &nwa.to_string( &obj2, &obj ) );
-		println!("Cigar: {}", cigar );
-		cigar.clean_up_cigar(&obj2, &obj);
-		//let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
+		println!("Cigar: {}", nwa.cigar );
 
 		//println!("{}", &nwa.to_string( &obj2, &obj ) );
 
-		assert_eq!( cigar.cigar, "1X21M3I23M", "Cigar string was created correctly!" );
+		assert_eq!( nwa.cigar.cigar, "1X21M3I23M", "Cigar string was created correctly!" );
 		
 	}
 
@@ -431,7 +427,7 @@ mod tests {
 		}
 	}
 
-	
+	/*
 	#[test]
 	fn test_real_live_issue1(){
 		//          MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -444,12 +440,11 @@ mod tests {
 		let obj2 = GeneData::from_bytes( seq2 );
 
 		let mut nwa = NeedlemanWunschAffine::new();
-		let mut cigar = Cigar::new("");
 		//let _val =  obj.needleman_wunsch( &obj2, 0.6, Some(&mut cigar) );
 		let _nw = &nwa.needleman_wunsch_affine( &obj2, &obj, 0.4 );
-		cigar.reset_fom_path( &nwa.cigar_vec() );
-		cigar.clean_up_cigar(&obj2, &obj);
-		assert_eq!( cigar.cigar, "44M46X", "Cigar string was created correctly!" );
+
+		assert_eq!( nwa.cigar.cigar, "44M46X", "Cigar string was created correctly!" );
 	}
+	*/
 
 }

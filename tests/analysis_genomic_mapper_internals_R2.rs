@@ -54,7 +54,7 @@ mod tests {
 	    }
 	    match idx.write_index( idx_path ) {
 	    	Ok(_) => {println!("I have expoorted the index {idx}")},
-	    	Err(e) => {panic!("I could not write the index for {idx}")}
+	    	Err(e) => {panic!("I could not write the index for {idx}: {e:?}")}
 	    };
 
 		// new(_gene_kmers:usize, version:String, specie: String, index:Option<String>, num_threads:usize, exp:&str, _debug: bool  ) -> Self{
@@ -74,7 +74,7 @@ mod tests {
 	    match err{
 	    	Some(e) => {
 	    		assert_eq!( single_cell_data.is_empty(), true, "no results in the data object");
-	    		assert_eq!( sam_strings.len(), 0, "I go no result for the search" );
+	    		assert_eq!( sam_strings.len(), 0, "I go no result for the search: {:?}" , e);
 	    	},
 	    	None=> {
 	    		assert_eq!( single_cell_data.is_empty(), false, "there no result in the data object and I expected '{sam_line:?}'");
@@ -96,7 +96,7 @@ mod tests {
 	}
 
 	#[test]
-	fn chrM_over_the_edge( ){
+	fn chr_m_over_the_edge( ){
 		let seq = b"CGATGGATCACAGGTCTATCACCCTATTAACCACTCACGGGAGCTCTCCATGCATTTGGTATTTTCGTCTGGGGGGTGTGCACGCGATAG";
 		let database = "testData/ChrM.fasta.gz";
 

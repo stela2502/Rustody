@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests {
 	use rustody::genes_mapper::Cigar;
-	use rustody::genes_mapper::cigar::{CigarEnum, CigarEndFix};
+	use rustody::genes_mapper::cigar::{CigarEnum, CigarEndFix, CigarTuple};
 
 
 	#[test]
@@ -84,12 +84,14 @@ mod tests {
 	fn test_quality(){
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
+		obj.soft_clip_start_end();
 		assert_eq!( obj.mapping_quality(), 21 );
 	}
 	#[test]
 	fn test_cigar_fix(){
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1M1X1M5X1M1X2M2X1M1X1M1X2M8X2I61M");
+		obj.soft_clip_start_end();
 		println!("This is the obtained cigar: {obj}");
 		assert_eq!( obj.cigar, "30X61M");
 		assert_eq!( obj.fixed, Some(CigarEndFix::Start), "both fixed");
@@ -133,7 +135,7 @@ mod tests {
 	#[test]
 	fn test_default_is_worst() {
 		let mut obj1 = Cigar::default();
-		let mut obj2 = Cigar::default();
+		let obj2 = Cigar::default();
 
 		obj1.restart_from_cigar( "32M" );
 
@@ -144,23 +146,34 @@ mod tests {
 	fn test_compare() {
 		let mut obj1 = Cigar::new("32M");
 		let mut obj2 = Cigar::new("36M");
-		obj1.reset_fom_path(&vec![CigarEnum::Match; 32]);
-		obj2.reset_fom_path(&vec![CigarEnum::Match; 36]);
+		//obj1.reset_fom_path(&vec![CigarTuple::from_scratch( CigarEnum::Match, 32)]);
+		//obj2.reset_fom_path(&vec![CigarTuple::from_scratch( CigarEnum::Match, 32)]);
 
-		assert!( obj2.better_as(&obj1), "{obj2} is better than {obj1}? {}",  obj2.better_as(&obj1) );
+		assert!( obj2.better_as(&obj1), "#1 \n{obj2} is better than \n{obj1}? {}",  obj2.better_as(&obj1) );
 
-		obj1.reset_fom_path( &[CigarEnum::Insertion, CigarEnum::Match, CigarEnum::Match, 
-			CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, 
-			CigarEnum::Deletion, CigarEnum::Match, CigarEnum::Match, CigarEnum::Match, 
-			CigarEnum::Match, ] );
-		obj2.reset_fom_path( &[CigarEnum::Match, CigarEnum::Match, CigarEnum::Deletion, 
-			CigarEnum::Match,CigarEnum::Insertion, CigarEnum::Match, CigarEnum::Match ]);
-		assert!( obj1.better_as(&obj2), "{obj1:?} is better than {obj2:?} ({})", obj2.better_as(&obj1) );
+		obj1.reset_fom_path( &[
+			CigarTuple::from_scratch( CigarEnum::Insertion, 1), 
+			CigarTuple::from_scratch( CigarEnum::Match,6), 
+			CigarTuple::from_scratch( CigarEnum::Deletion, 1), 
+			CigarTuple::from_scratch( CigarEnum::Match, 4) 
+			] 
+		);
+		obj2.reset_fom_path( &[
+			CigarTuple::from_scratch( CigarEnum::Match,2),
+			CigarTuple::from_scratch( CigarEnum::Deletion, 1),
+			CigarTuple::from_scratch( CigarEnum::Match,2),
+			CigarTuple::from_scratch( CigarEnum::Deletion, 1),
+			CigarTuple::from_scratch( CigarEnum::Match,1),
+			CigarTuple::from_scratch( CigarEnum::Insertion,1),
+			CigarTuple::from_scratch( CigarEnum::Match,4),
+		    ]
+		);
+		assert!( obj1.better_as(&obj2), "#2 \n{obj1:?} is better than \n{obj2:?} ({})", obj2.better_as(&obj1) );
 
 		obj1.restart_from_cigar( "21M1D49M1I3M" ); // len 74
 		obj2.restart_from_cigar( "1I20M1D52M" ); // len 73
 
-		assert!( obj1.better_as(&obj2), "{obj1:?}\nis better than \n{obj2:?} ({})", obj1.better_as(&obj2) );
+		assert!( obj1.better_as(&obj2), "#3 \n{obj1:?}\nis better than \n{obj2:?} ({})", obj1.better_as(&obj2) );
 	}
 
 	

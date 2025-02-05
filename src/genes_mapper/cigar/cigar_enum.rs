@@ -1,4 +1,6 @@
 use std::fmt;
+use regex::Regex;
+
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum CigarEnum{
@@ -7,6 +9,9 @@ pub enum CigarEnum{
 	Insertion,
 	Deletion,
 	Empty,
+	Softclip,
+	Hardclip,
+	Nothing,
 }
 
 impl CigarEnum{
@@ -15,13 +20,7 @@ impl CigarEnum{
 		self == &CigarEnum::Deletion || self == &CigarEnum::Insertion
 	}
 	pub fn opposite(&self, other: &Self ) ->bool {
-		match &self{
-			CigarEnum::Match => other == &CigarEnum::Mismatch,
-			CigarEnum::Mismatch => other == &CigarEnum::Match,
-			CigarEnum::Insertion => other == &CigarEnum::Deletion,
-			CigarEnum::Deletion => other == &CigarEnum::Insertion,
-			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
-		}
+		other == &self.get_opposite()
 	}
 	pub fn get_opposite(&self) -> Self {
 		match &self{
@@ -30,6 +29,9 @@ impl CigarEnum{
 			CigarEnum::Insertion => CigarEnum::Deletion,
 			CigarEnum::Deletion => CigarEnum::Insertion,
 			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
+			CigarEnum::Hardclip => CigarEnum::Softclip,
+			CigarEnum::Softclip => CigarEnum::Hardclip,
+			CigarEnum::Nothing => panic!("You can not compare CigarEnum::Nothing to anything"),
 		}
 	}
 	pub fn to_id(&self) -> usize{
@@ -39,6 +41,9 @@ impl CigarEnum{
 			CigarEnum::Insertion => 2,
 			CigarEnum::Deletion => 3,
 			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
+			CigarEnum::Hardclip => 4,
+			CigarEnum::Softclip => 5,
+			CigarEnum::Nothing => 6,
 		}
 	}
 	pub fn to_string(&self) -> String{
@@ -47,6 +52,9 @@ impl CigarEnum{
 	        CigarEnum::Deletion => "D".to_string(),
 	        CigarEnum::Match =>  "M".to_string(),
 	        CigarEnum::Mismatch =>  "X".to_string(),
+	        CigarEnum::Hardclip => "H".to_string(),
+			CigarEnum::Softclip => "S".to_string(),
+			CigarEnum::Nothing => "N".to_string(),
 	        CigarEnum::Empty => panic!("That can not be convertet"),
 	    }
 	}
@@ -56,9 +64,15 @@ impl CigarEnum{
             "D" => Some(CigarEnum::Deletion),
             "M" => Some(CigarEnum::Match),
             "X" => Some(CigarEnum::Mismatch),
-            // Add more cases as needed
+            "H" => Some(CigarEnum::Hardclip),
+			"S" => Some(CigarEnum::Softclip),
+			"N" => Some(CigarEnum::Nothing),
+			// Add more cases as needed
             _ => None,
         }
+    }
+    pub fn get_regex() -> Regex {
+    	Regex::new(r"(\d+)([MIDXHSN])").unwrap()
     }
 }
 
@@ -72,20 +86,17 @@ impl PartialEq<&str> for CigarEnum {
             CigarEnum::Deletion => *other == "D",
             CigarEnum::Match => *other == "M",
             CigarEnum::Mismatch => *other == "X",
+			CigarEnum::Hardclip => *other == "H",
+			CigarEnum::Softclip => *other == "S",
+			CigarEnum::Nothing => *other == "N",
             CigarEnum::Empty => false,  // We assume an empty variant should never compare to a string
+
         }
     }
 }
 
 impl fmt::Display for CigarEnum {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let direction_str = match self {
-            CigarEnum::Match => "M",
-			CigarEnum::Mismatch => "X",
-			CigarEnum::Insertion => "I",
-			CigarEnum::Deletion => "D",
-			CigarEnum::Empty => panic!("There is an empty cigar entry in your vector!"),
-        };
-        write!(f, "{}", direction_str)
+        write!(f, "{}", self.to_string() )
     }
 }

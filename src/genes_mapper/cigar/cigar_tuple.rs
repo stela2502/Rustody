@@ -129,6 +129,14 @@ impl CigarTuple {
         }
     }
 
+    pub fn to_string(&self) -> String{
+        format!("{}{}", self.vec_len, self.option )
+    }
+
+    pub fn is_a(&self, other:&CigarEnum ) -> bool {
+        &self.option == other
+    }
+
 
     // You can add other methods to operate on the `CigarTuple`
 

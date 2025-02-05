@@ -512,8 +512,8 @@ impl GenesMapper{
 			let to=9.min(res_vec.len());
 			println!("I have collected these initial matches (first 10): {:?}", &res_vec[0..to] );
 		}
-	    let mut cigar= Cigar::new("");
-	    cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
+	    //let mut cigar= Cigar::new("");
+	    //cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
 	    //panic!("remind me what I get here: {res_vec:?}");
 
 		let mut crappy_mappings = false;

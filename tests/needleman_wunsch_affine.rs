@@ -5,7 +5,6 @@
 mod tests {
 	use rustody::genes_mapper::NeedlemanWunschAffine;
 	use rustody::genes_mapper::gene_data::GeneData;
-	use rustody::genes_mapper::cigar::Cigar;
 	use std::fs;
 	use std::path::Path;
 
@@ -37,11 +36,10 @@ mod tests {
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		assert_eq!( nw, 0.0, "perfect match has nw of 0");
 
-		let mut cigar= Cigar::new( "" );
-		cigar.reset_fom_path( &test.cigar_vec() );
+
 		let _ =test.export_dp_matrix( &(OPATH.to_string()+"test_needleman_wunsch_affine.tsv"));
 
-		assert_eq!( format!("{}",cigar.cigar), "50M", "get a perfect 50 bp matching result" )
+		assert_eq!( format!("{}",test.cigar.cigar), "50M", "get a perfect 50 bp matching result" )
 
 
 	}
@@ -62,11 +60,10 @@ mod tests {
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		assert!( nw < 0.5, "this NOT perfect match has nw of less than 0.5");
 
-		let mut cigar= Cigar::new( "" );
-		cigar.reset_fom_path( &test.cigar_vec() );
+
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_gap.tsv"));
 
-		assert_eq!( format!("{}",cigar.cigar), "18M4D28M", "get a perfect 50 bp matching result including 4D!!" )
+		assert_eq!( format!("{}",test.cigar.cigar), "18M4D28M", "get a perfect 50 bp matching result including 4D!!" )
 
 
 	}
@@ -88,11 +85,10 @@ mod tests {
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		assert!( nw < 0.5, "this NOT perfect match has nw of less than 0.5");
 
-		let mut cigar= Cigar::new( "" );
-		cigar.reset_fom_path( &test.cigar_vec() );
+
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_needleman_wunsch_affine_insert.tsv"));
 
-		assert_eq!( format!("{}",cigar.cigar), "18M4I28M", "get a perfect 50 bp matching result including 4I!!" )
+		assert_eq!( format!("{}",test.cigar.cigar), "18M4I28M", "get a perfect 50 bp matching result including 4I!!" )
 
 
 	}
@@ -178,13 +174,9 @@ mod tests {
 		let nw = test.needleman_wunsch_affine( &read, &database, 1.0 );
 		assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 0");
 
-		let mut cigar= Cigar::new( "" );
-		cigar.reset_fom_path( &test.cigar_vec() );
-
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_insertion.tsv"));
 
-
-		assert_eq!( format!("{}",cigar.cigar), "1M1X8M1D39M2X16M1X3M1X1M", "A really bitchy mapping #1" );
+		assert_eq!( format!("{}",test.cigar.cigar), "1M1X8M1D39M2X16M1X3M1X1M", "A really bitchy mapping #1" );
 	}
 
 	#[test]
@@ -205,12 +197,9 @@ mod tests {
 		let nw = test.needleman_wunsch_affine( &database, &read, 1.0 );
 		assert!( nw < 5.0 ,"mismatch match has nw of less tha  0.5 0");
 
-		let mut cigar= Cigar::new( "" );
-		cigar.reset_fom_path( &test.cigar_vec() );
-
 		let _ =test.export_dp_matrix(&(OPATH.to_string()+"test_failing_deletion.tsv"));
 
-		assert_eq!( format!("{}",cigar.cigar), "1M1X8M1I39M2X16M1X3M1X1M", "A really bitchy mapping #2" );
+		assert_eq!( format!("{}",test.cigar.cigar), "1M1X8M1I39M2X16M1X3M1X1M", "A really bitchy mapping #2" );
 
 	}
 

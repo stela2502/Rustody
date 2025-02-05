@@ -63,7 +63,7 @@ mod tests {
 
 	    		matches += match cigar {
 	    			Some(cig) => {
-	    				assert_eq!( &format!("{}",mapper_result[0].get_cigar()), &format!("{}",cig), "The Cigar is as expected?" );
+	    				assert_eq!( &format!("{}",mapper_result[0].get_cigar().cigar), &format!("{}",cig.cigar), "The Cigar is as expected?" );
 	    				1
 	    			},
 	    			None => {0}
@@ -194,7 +194,6 @@ mod tests {
 
 
 		let mut cig = Cigar::new( "22M1I51M1D" );
-		cig.reset_fom_path( &cig.string_to_vec( &cig.cigar ));
 		cig.fixed = Some(CigarEndFix::Na);
 		test_this_seqence( 
 			b"CTGCCCCTCTTTTGTGTTGTCTTTTTTTCTTAGACTATCTGTCCTTTCTCCTTGATTTCTAAACTATGTTATTT",
@@ -231,7 +230,6 @@ mod tests {
 	fn test_wrap_arount_to_max2(){
 
 		let mut cig = Cigar::new( "1M1X51M" );
-		cig.reset_fom_path( &cig.string_to_vec( &cig.cigar ));
 		cig.fixed = Some(CigarEndFix::Na);
 
 		test_this_seqence( 
@@ -254,7 +252,6 @@ mod tests {
 	fn test_cigar_sequence_length_mismatch(){
 
 		let mut cig = Cigar::new( "72M1X12M" );
-		cig.reset_fom_path( &cig.string_to_vec( &cig.cigar ));
 		cig.fixed = Some(CigarEndFix::Na);
 		// cigar:Option<Cigar>, gene: Option<String>, start:Option<usize>, err
 		test_this_seqence( 
@@ -315,7 +312,7 @@ mod tests {
 		assert_eq!( Path::new("testData/output_index_test/genes/index.bin").exists(), true, "the index file exists");
 		assert_eq!( Path::new("testData/output_index_test/genes/indexed_sequences.fa.gz").exists(), true, "the fasta file exists");
 
-		let mut from_binary = match GenesMapper::load_index( "testData/output_index_test/genes" ){
+		let from_binary = match GenesMapper::load_index( "testData/output_index_test/genes" ){
 			Ok(mapper) => mapper,
 			Err(e) => {panic!("The loading of the index failed with the error {e}")}
 		};

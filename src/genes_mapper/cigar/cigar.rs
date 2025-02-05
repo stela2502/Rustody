@@ -55,7 +55,7 @@ pub struct Cigar{
 // Implementing Display trait for SecondSeq
 impl fmt::Display for Cigar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Cigar {} - fixed {:?}\nstate changed {} - contains {:?}", self.cigar, self.fixed, self.state_changes, self.contains  )
+        write!(f, "Cigar {} - fixed {:?}; state changed {}; contains {:?}", self.cigar, self.fixed, self.state_changes, self.contains  )
     }
 }
 
@@ -65,7 +65,7 @@ impl Default for Cigar {
             cigar: "".to_string(),
             fixed: None,
             debug: false,
-            contains: vec![false;4],
+            contains: vec![false;7],
             state_changes: 1000,
             dropped_start: 0,
             dropped_end:0,        }
@@ -94,15 +94,23 @@ impl Ord for Cigar {
 impl Cigar{
 
 	pub fn new( cigar: &str ) -> Self{
-		Self{
+		let mut ret = Self{
 			cigar: cigar.to_owned(),
 			fixed:None,
 			debug:false,
-			contains: vec![false;4],
+			contains: vec![false;7],
 			state_changes: 0,
 			dropped_start: 0,
             dropped_end:0,
+		};
+		let vec = ret.to_cigar_tupel_vec(false);
+		ret = Self::default();
+		for tuple in &vec{
+			ret.state_changes +=1;
+			ret.contains[tuple.option.to_id()] = true;
+			ret.cigar += &tuple.to_string();
 		}
+		ret
 	}
 
 	pub fn better_as( &self, other: &Self ) -> bool{
@@ -120,8 +128,10 @@ impl Cigar{
 	pub fn clear(&mut self) {
 		self.cigar ="".to_string();
 		self.fixed = None;
-		self.contains = vec![false;4];
+		self.contains.fill(false);
 		self.state_changes = 0;
+		//self.dropped_start = 0;
+		//self.dropped_end = 0;
 	}
 
 	fn max3<T: Ord>(a: T, b: T, c: T) -> T {
@@ -147,7 +157,7 @@ impl Cigar{
     /// but also store their position in both the Vec<CigarEnum> and the cigar.cigar string.
 	fn to_cigar_tupel_vec( &self, only_gaps:bool ) -> Vec<CigarTuple> {
 
-		let re = Regex::new(r"(\d+)([MIDX])").unwrap(); // Example CIGAR regex
+		let re = CigarEnum::get_regex(); // Example CIGAR regex
 		let mut cigar_tuples = Vec::with_capacity( self.state_changes );
 		let mut vec_pos = 0;
 		let mut str_pos = 0;
@@ -211,11 +221,11 @@ impl Cigar{
 
     pub fn restart_from_cigar(&mut self, cigar_string:&str ) {
     	self.clear();
+    	self.cigar = cigar_string.to_string();
 
-    	let result = self.string_to_vec(cigar_string);
+    	let result = self.to_cigar_tupel_vec( false );
 
 	    self.reset_fom_path( &result );
-	    self.soft_clip_start_end();
     }
 
     	/// This function returns the number of equal bases before the position and therefore
@@ -223,20 +233,27 @@ impl Cigar{
 	fn neg_look_ahead<T>( &self, read:&T, database:&T, pos_r: usize, pos_d:usize ) -> usize
 	where
     T: BinaryMatcher{
-		let mut ret = pos_r;
-		let mut pos_d2 = pos_d;
-		while ret >= 0 && pos_d2 >= 0 && read.get_nucleotide_2bit( ret ) ==  database.get_nucleotide_2bit(  pos_d2 ) {
-			if ret == 0 || pos_d2 == 0 {
-				if ret > 0 {
-					ret -=1; // that is important to get the correct size reported!
-				}
+		let mut pos_read = pos_r;
+		let mut pos_db = pos_d;
+		let mut overlaps = 0;
+		let mut match_a = "".to_string();
+		let mut match_b = "".to_string();
+ 		while read.get_nucleotide_2bit( pos_read ) ==  database.get_nucleotide_2bit(  pos_db ) {
+			overlaps +=1;
+			match_a += &self.get_nucleotide_2bit(read.get_nucleotide_2bit( pos_read )  );
+			match_b += &self.get_nucleotide_2bit(database.get_nucleotide_2bit( pos_db )  );
+			if pos_read == 0 || pos_db == 0 {
 				break;
 			}
-			ret -= 1;
-			pos_d2 -=1;
+			pos_read -= 1;
+			pos_db -=1;
 		}
-		//println!("searching for neg_look_ahead from pos_r {pos_r} and pos_d {pos_d} found {ret} overlaps");
-		pos_r - ret 
+		#[cfg(all(debug_assertions, feature = "detailed_mapping_debug"))]
+		{
+			println!("searching for neg_look_ahead from pos_r {pos_r} and pos_d {pos_d} found {overlaps} ({match_a} and {match_b}) overlaps ({pos_read} and {pos_db} were my iterators");
+			println!("that is the mismatching pair: {}, {}", &self.get_nucleotide_2bit(read.get_nucleotide_2bit( pos_read )),  &self.get_nucleotide_2bit(database.get_nucleotide_2bit( pos_db ) ));
+		}
+		overlaps
 	}
 
 
@@ -363,14 +380,14 @@ impl Cigar{
     				pos_a +=1;
     				pos_b +=1;
 				},
-				CigarEnum::Insertion => {
+				CigarEnum::Insertion | CigarEnum::Hardclip | CigarEnum::Softclip => {
 					//"I",
 					let nucl_a = self.get_nucleotide_2bit( read.get_nucleotide_2bit(pos_a) );
 					a += &nucl_a;
 					b += "-";
 					pos_a +=1;
 				},
-				CigarEnum::Deletion => {
+				CigarEnum::Deletion | CigarEnum::Nothing => {
 					//"D",
 					let nucl_b = self.get_nucleotide_2bit( database.get_nucleotide_2bit(pos_b) );
 					b += &nucl_b;
@@ -383,19 +400,19 @@ impl Cigar{
     	format!("Cigar String: {}\n{}\n{}\n{}\n{}\n{}",self.cigar, tens, ones, a, b , cigar )
     }
 
-    fn check_alignment<T: BinaryMatcher>(&mut self, read:&T, database:&T) {
+    pub fn check_alignment<T: BinaryMatcher>(&mut self, read:&T, database:&T) {
 
     	let mut changed = false;
     	let mut enum_vec = self.string_to_vec( &self.cigar );
     	let mut pos_a = 0;
     	let mut pos_b = 0;
-    	for mut operation in enum_vec.iter_mut()  {
+    	for operation in enum_vec.iter_mut()  {
 
     		match operation{
     			CigarEnum::Match => {
-					if ( self.get_nucleotide_2bit( read.get_nucleotide_2bit(pos_a) ) 
+					if self.get_nucleotide_2bit( read.get_nucleotide_2bit(pos_a) ) 
 						!= 
-						self.get_nucleotide_2bit( database.get_nucleotide_2bit(pos_b) )) {
+						self.get_nucleotide_2bit( database.get_nucleotide_2bit(pos_b) ) {
 						*operation = CigarEnum::Mismatch;
 						changed = true;
 					}
@@ -413,10 +430,10 @@ impl Cigar{
     				pos_a +=1;
     				pos_b +=1;
 				},
-				CigarEnum::Insertion => {
+				CigarEnum::Insertion | CigarEnum::Hardclip | CigarEnum::Softclip => {
 					pos_a += 1; // Insertion advances only read position
 				},
-				CigarEnum::Deletion => {
+				CigarEnum::Deletion | CigarEnum::Nothing => {
 					pos_b += 1; // Deletion advances only database position
 				},
 				CigarEnum::Empty => panic!("There is an empty cigar entry in your vector!"),
@@ -424,8 +441,46 @@ impl Cigar{
     	}
 
     	if changed {
-    		self.reset_fom_path( &enum_vec.clone()) ;
+    		self.reset_fom_path( &Self::collapse_cigar_enum_vec(&enum_vec) ) ;
     	}
+    }
+
+    pub fn finalize(&mut self ) {
+    	let mut path = Self::collapse_cigar_enum_vec ( &self.to_vec());
+    	// let's see if there are some useless D/I or I/D combinations in the same length
+    	// replace them by one nX instead.
+    	for id in 0..path.len()-1 {
+    		if path[id].is_gap() && path[id].option.opposite( &path[id+1].option) && path[id].len() == path[id +1 ].len() {
+    			path[id].option = CigarEnum::Mismatch;
+    			path[id+1].vec_len = 0;
+    		}
+    	}
+    	self.reset_fom_path( &path );
+    }
+
+    fn expand_cigar_tuple_vec( vec: &[CigarTuple]) -> Vec<CigarEnum> {
+    	let mut ret = Vec::<CigarEnum>::with_capacity( vec.into_iter().map(|v| v.len() ). sum::<usize>() );
+    	for option in vec {
+    		option.extend_vec( &mut ret);
+    	}
+    	ret
+    }
+
+    fn collapse_cigar_enum_vec( vec: &[CigarEnum] ) -> Vec<CigarTuple> {
+    	let mut path = Vec::<CigarTuple>::with_capacity( 30 );
+    	for option in vec {
+    		if let Some(tuple) = path.last_mut() {
+			    if tuple.is_a(&option) {
+			        tuple.vec_len += 1;
+			    } else {
+			        path.push(CigarTuple::from_scratch(*option, 1));
+			    }
+			} else {
+				// we obviousely are at position 0:
+			    path.push(CigarTuple::from_scratch(*option, 1));
+			}
+    	}
+    	path
     }
 
     pub fn to_sam_string(&self) -> (String,  usize ){
@@ -479,7 +534,7 @@ impl Cigar{
 		if self.dropped_end > 0 {
 			ret += &format!("{}H", self.dropped_end);
 		}
-
+		// todo("If the start Clips would change the positions?")
 		return (ret, move_start )
     }
 
@@ -501,7 +556,7 @@ impl Cigar{
     	#[cfg(all(debug_assertions, feature = "mapping_debug"))]
     	{
     		println!("########################\nStarting a new FIX\n########################\n{}",self.as_alignement(read, database));
-    		println!("Fixing fix_di_problems locations in this alignement:\n{}", self.as_alignement(read, database) );
+    		println!("\nFixing fix_di_problems locations in this alignement:\n{}", self.as_alignement(read, database) );
     	}
 
 
@@ -550,19 +605,19 @@ impl Cigar{
     						panic!("{} is not a gap!", cigar_tuple_vec[id])
     					}
     				};
-    				#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-    				{
-    					println!("Foud a DI or ID problem! at read pos {:?} database_pos {:?}", on_read, on_db );
-    					cigar_tuple_vec[id].print_debug();
-    				}
     				
-
+    				
     				if on_read == on_db  {
     					//println!("And they even had the same nucleotides");
     					let mut changed = cigar_tuple_vec.remove(id);
     					changed.option = CigarEnum::Match;
     					cigar_tuple_vec[id-1] = changed;
     					modified = true;
+    					#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+	    				{
+	    					println!("Foud a DI or ID problem! at read pos {:?} database_pos {:?}", on_read, on_db );
+	    					cigar_tuple_vec[id].print_debug();
+	    				}
     				}else {
     					//println!("the two slices did not match: {:?} vs {:?} :-(",on_read  ,  on_db )
     				}
@@ -575,7 +630,9 @@ impl Cigar{
         			.map(|cigar| cigar.to_string()) // Convert each CigarTuple to a string
         			.collect::<String>(); // Collect into a single string
         		self.restart_from_cigar(&cigar );
-        		//println!("The modified alignement: {}", self.as_alignement(read, database));
+
+        		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+        		println!("The modified alignement: \n{}\n", self.as_alignement(read, database));
     		}
     	}
 
@@ -677,33 +734,91 @@ impl Cigar{
 		};
 
 		//println!("####################################\nadd the gaps back in\n####################################\n");
+		// this creates problems if the next position in the data would be actually a D and weare moving I's like this:
+		//Cigar String: 1X1M2X1I1X1M1X1D3I44M3M31M
+		//000000000011111111112222222222333333333344444444445555555555666666666677777777778888888888
+		//012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+		//ATTATTGT-GGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG
+		//TTGT-GGGT---GGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG
+		//XMXXIXMXDIIIMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+
+		//replace_n_and_start_at introducing M while removing Some(Deletion)
+        //     updated: 0 with this == 8 and flip_back 3
+		//Intermediate alignement at 8; :
+		//Cigar String: 1X1M2X1I1X1M1X1D3M44M3M31M
+		//000000000011111111112222222222333333333344444444445555555555666666666677777777778888888888
+		//012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+		//ATTATTGT-GGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG
+		//TTGT-GGGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTGnnn
+		//XMXXIXMXDMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+		//A not existing intermediate to explain the problem
+		//000000000011111111112222222222333333333344444444445555555555666666666677777777778888888888
+		//012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+		//ATTATTGT-GGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG
+		//TTGT-G---GGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG
+		//XMXXIXMXDMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
 
 		while flip_back > 0 {
 			//println!("Found {} - trying to flip {flip_back} entries to {flip_to}", cigar_tuple_vec[this]);
 			if cigar_tuple_vec[this].option == flip_to {
 				//println!("alread a {} - no change {flip_back} (this={this}", flip_to);
-				this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
+				this = this.checked_sub(1).expect(&format!("#1 Sorry I failed to re-introduce the gap!! {}", self.as_alignement( read, database )));
 				skip +=1;
 			}else if cigar_tuple_vec[this].option.opposite(&flip_to) {
-				if flip_back > cigar_tuple_vec[this].vec_len as i32{
-					flip_back -= cigar_tuple_vec[this].vec_len as i32;
-					cigar_tuple_vec[this].vec_len = 0;
+				// here we need to be extremely careful!
+				// would that actually benefit the match?!
+				let test = if cigar_tuple_vec[this].option == CigarEnum::Insertion{
+					let match_to_start = self.neg_look_ahead(read, database, cigar_tuple_vec[this].read_position, cigar_tuple_vec[this].database_position );
+					let match_behind = self.neg_look_ahead(read, database, cigar_tuple_vec[this].read_position, cigar_tuple_vec[this].database_position );
+					if match_to_start > 1 && match_behind != 2 {
+						true
+					}else {
+						false
+					}
+				}else if cigar_tuple_vec[this].option == CigarEnum::Deletion {
+					self.neg_look_ahead(read, database, cigar_tuple_vec[this].read_position -1, cigar_tuple_vec[this].database_position -1 ) > 1
+					&&
+				   self.neg_look_ahead(read, database, cigar_tuple_vec[this].read_position +1, cigar_tuple_vec[this].database_position +1 ) == 2
 				}else {
-					// crap - we can not kill all of that, but need to spliot this, too!
-					match cigar_tuple_vec[this].split_at( flip_back.try_into().unwrap(), CigarEnum::Empty ){
-						Some(new_fragment) => {
-							// this is the empty one - so we can savely ignore that one ;-)
-							flip_back = 0;
-						},
-						None => {
-							panic!("We tried to remove part of an opposite gap as the last step of our process!\nAnd failed!\n{}", 
-								self.as_alignement( read, database)
-								);
+					false
+				};
+				if test
+				{
+					// this deletion would actually benefit the alignement.
+					#[cfg(all(debug_assertions, feature = "detailed_mapping_debug"))]
+					println!("This {} would actually benefit the alignement! - I need to still flip {} entries", cigar_tuple_vec[this], flip_back,);
+					this = this.checked_sub(1).expect(&format!("#2 Sorry I failed to re-introduce the gap!! {}", self.as_alignement( read, database )));
+					skip +=1;
+					//000000000011111111112222222222333333333344444444445555555555666666666677777777778888888888
+					//012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789
+					//ATTATTGT-GGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG
+					//TTGT----GGGTGGCTGAGTCCTTCTCATCATGGGACGAGTGAGCCAGAGCGGGGGAAAGGGCATGAAGTAAAGCGTTGCCTGAATGCTG
+					//XMXXIIIIDMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+				}else {
+					// Nay - crap info.
+					#[cfg(all(debug_assertions, feature = "detailed_mapping_debug"))]
+					println!("This {} can go! {} and {}", cigar_tuple_vec[this], cigar_tuple_vec[this].read_position -1, 
+						cigar_tuple_vec[this].database_position  );
+					if flip_back > cigar_tuple_vec[this].vec_len as i32{
+						flip_back -= cigar_tuple_vec[this].vec_len as i32;
+						cigar_tuple_vec[this].vec_len = 0;
+					}else {
+						// crap - we can not kill all of that, but need to spliot this, too!
+						match cigar_tuple_vec[this].split_at( flip_back.try_into().unwrap(), CigarEnum::Empty ){
+							Some(new_fragment) => {
+								// this is the empty one - so we can savely ignore that one ;-)
+								flip_back = 0;
+							},
+							None => {
+								panic!("We tried to remove part of an opposite gap as the last step of our process!\nAnd failed!\n{}", 
+									self.as_alignement( read, database)
+									);
+							}
 						}
 					}
 				}
 				
-				this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
+				this = this.checked_sub(1).expect(&format!("3# Sorry I failed to re-introduce the gap!! {}", self.as_alignement( read, database )));
 				skip +=1;
 
 				//println!("This is the opposite - right - killing it end reducing flip_back to {flip_back} (this={this}");
@@ -716,7 +831,7 @@ impl Cigar{
 						added +=1;
 						//println!("overly large match!");
 						if flip_back > 0 {
-							this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
+							this = this.checked_sub(1).expect(&format!("Sorry I failed to re-introduce the gap!! {}", self.as_alignement( read, database )));
 							skip +=1;
 						}
 					},
@@ -724,7 +839,7 @@ impl Cigar{
 						//println!("Too small match");
 						flip_back -= cigar_tuple_vec[this].len() as i32;
 						if flip_back > 0 {
-							this = this.checked_sub(1).expect("Sorry I failed to re-introduce the gap!!");
+							this = this.checked_sub(1).expect(&format!("4# Sorry I failed to re-introduce the gap!! {}", self.as_alignement( read, database )));
 							skip +=1;
 						}
 					}
@@ -745,17 +860,32 @@ impl Cigar{
 			}
 		}
 		
-		let mut cig =  Vec::<CigarEnum>::with_capacity( cigar_tuple_vec.iter().map(|v| v.len()).sum::<usize>() );
-	    cigar_tuple_vec.iter().for_each(|v| v.extend_vec( &mut cig ) );
-
-		self.clear();
-		self.reset_fom_path( &cig );
-		self.check_alignment( read, database);
+		self.reset_fom_path( &cigar_tuple_vec );
+		//self.check_alignment( read, database);
 
 		#[cfg(all(debug_assertions, feature = "detailed_mapping_debug"))]
-		println!("####################################\nAfter the fix I got the alignement:\n{}\n####################################", self.as_alignement(read, database));
+		println!("####################################\nAfter the fix I return {} and got the alignement:\n{}\n####################################",skip + added +1, self.as_alignement(read, database));
 		
 		return Ok( skip + added +1 );
+	}
+
+	/// we need to update the read and database positions for this vector
+	fn update_positions( &self, vec: &mut Vec<CigarTuple> ) {
+		let mut pos_read = 0;
+		let mut pos_database = 0;
+
+		for item in vec {
+			item.read_position = pos_read;
+			item.database_position = pos_database;
+			if item.option == CigarEnum::Insertion {
+				pos_read += item.len();
+			}else if item.option == CigarEnum::Deletion {
+				pos_database += item.len();
+			}else {
+				pos_read += item.len();
+				pos_database += item.len();
+			}
+		}
 	}
 
 	/// a streamlined function that processes the match from the rear and checks both deletions and insertions.
@@ -768,7 +898,7 @@ impl Cigar{
     		//println!("Fixing {} locations in this alignement:\n{}", this_option, self.as_alignement(read, database) );
     		//let mut cigar_vec = self.to_vec();
     		//let mut skipped = skip;
-
+    		let mut fixes = 0;
     		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
     		println!("Strting alignement:\n{}", self.as_alignement( read, database) );
     		let mut cigar_tuple_vec = self.to_cigar_tupel_vec( false );
@@ -786,6 +916,19 @@ impl Cigar{
     				// need to change the lib!
     				continue;
     			}
+    			// make sure all the positions are still up to date!
+    			if fixes > 0 {
+    				#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+    				println!("I think it is more save to restart this here! \n{}", self.as_alignement(read, database));
+    				// clean out the likely messy inserts / deletions
+    				self.finalize();
+    				#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+    				println!("after the finalze run:\n{}", self.as_alignement(read, database));
+    				return self.fix_next_gap_location( read, database, 0 );
+    			}else {
+    				self.update_positions( &mut cigar_tuple_vec );
+    			}
+    			
     			let current_tuple = cigar_tuple_vec[id].clone();
 
     			let (on_read, on_db ) = match current_tuple.option{
@@ -803,12 +946,24 @@ impl Cigar{
 
     			let matches = self.neg_look_ahead(read, database, on_read, on_db );
     			if matches == 0 {
+    				#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+    				println!("no overlap for test {on_read} {on_db}");
     				continue;
     			}
-
+    			if cigar_tuple_vec[id-1].option.opposite( &current_tuple.option ) 
+    				&& matches <= current_tuple.len()
+    				&& matches <= cigar_tuple_vec[id-1].len()
+    				{
+    				// this is by far not worth looking into!
+    				cigar_tuple_vec[id].vec_len -= matches;
+    				cigar_tuple_vec[id-1].vec_len -= matches;
+    				continue;
+    			}
+				fixes +=1;
     			#[cfg(all(debug_assertions, feature = "mapping_debug"))]
     			{
-    				println!("{}\nI found a gap {} at read {} db {} and the overlap was {}",
+    				println!("id:{}\n{}\nI found a gap {} at read {} db {} and the overlap was {}",
+    				 id,
 	    			 self.as_alignement( read, database),
 	    			 current_tuple, 
 	    			 on_read, 
@@ -828,7 +983,8 @@ impl Cigar{
 	    		};
 
     			#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-    			println!("After the fix:\n{}\n####################################\n", self.as_alignement( read, database));
+    			println!("After the replace_n_and_start_at run we will go on on id {}-1:\n{}\n####################################\n",
+    				id, self.as_alignement( read, database));
     			if ! self.contains[CigarEnum::Mismatch.to_id()]{
     				break;
     			}
@@ -1031,64 +1187,25 @@ impl Cigar{
 	    mine + inserts//.saturating_sub(deletions)
 	}
 
-
-/*	fn vec_to_cigar(&self, path: &[CigarEnum] ) -> String{
-		let mut count = 0;
-	    let mut last_direction = None;
-	    let mut ret = "".to_string();
-	    for &direction in path.iter() {
-	        if Some(direction) == last_direction {
-	            count += 1;
-	            //println!("Count with state {last_direction:?} increased to {count}");
-	        }
-	        else {
-	            if count > 0 {
-	                ret += &format!("{}{}",count, last_direction.unwrap());
-	            }
-	            count = 1;
-	            last_direction = Some(direction);
-	        }
-	    }
-	    ret
-	}
-*/
 	/// converts a CigarEnum vector into a Cigar string and stores that internally.
 	/// This function also updated the contains vector.
-	pub fn reset_fom_path(&mut self, path: &[CigarEnum] ){
-	    let mut count = 0;
-	    let mut last_direction = None;
+	pub fn reset_fom_path(&mut self, path: &[CigarTuple] ){
 
 		self.cigar.clear();
-		self.state_changes = 0;
 
-		//println!("The cigar Path: {path:?}");
+		// boost and compact again:
+		//let corrected = Self::finalize( path );
+		self.state_changes = path.len();
 
-		//let mut loc_path = path.to_vec();
-
-	    for &direction in path.iter() {
-	        if Some(direction) == last_direction {
-	            count += 1;
-	            //println!("Count with state {last_direction:?} increased to {count}");
-	        }
-	        else {
-	        	
-	            if count > 0 {
-	            	self.state_changes += 1;
-	                self.cigar.push_str(&format!("{}{}",count, last_direction.unwrap()));
-	                self.contains[last_direction.unwrap().to_id()] =  true ;
-	                //println!("Added {count}{last_direction:?}");
-	            }
-	            count = 1;
-	            last_direction = Some(direction);
-	        }
-	    }
-
-	    if count > 0 {
-	        self.cigar.push_str(&format!("{}{}",count, last_direction.unwrap()));
-	        self.contains[last_direction.unwrap().to_id()] =  true ;
+	    for tuple in path {
+	    	
+	        self.cigar.push_str(&tuple.to_string());
+	        self.contains[tuple.option.to_id()] = true;
+	        
 	    }
 	}
 
+/*
 	fn populate_contains( &mut self, cigar: &[CigarEnum] ) {
 		for entry in cigar{
 			self.contains[entry.to_id()] = true;
@@ -1165,7 +1282,7 @@ impl Cigar{
 	            }
 	        }
 	    }
-	}
+	}*/
 
 
 
@@ -1181,54 +1298,79 @@ impl Cigar{
 		    let mut j = cols - 1;
 
 		    // fix the final entry
-		    if  last_match {
-				path.push(CigarEnum::Match);
+		    if last_match {
+				path.push(CigarTuple::from_scratch (CigarEnum::Match, 1));
 		    }else {
-		    	path.push(CigarEnum::Mismatch);
+		    	path.push(CigarTuple::from_scratch (CigarEnum::Mismatch, 1));
 		    }
 
 		    while i > 0 && j > 0 {
 		        let current_score = matrix[i][j].score;
-		        println!("Current score = {current_score}");
+		        //println!("Current score = {current_score}");
 		        let diagonal_score = matrix[i - 1][j - 1].score;
 		        let up_score = matrix[i - 1][j].score;
 		        let left_score = matrix[i][j - 1].score;
 
 		        let max = Self::max3(diagonal_score, up_score, left_score);
-		        if max == diagonal_score {
+		        let option = if max == diagonal_score {
+		            i -= 1;
+		            j -= 1;
 		        	if diagonal_score > current_score {
 		        		// mismatch!!!
-		        		println!("adding Mismatch");
-		        		path.push(CigarEnum::Mismatch);
+		        		//println!("adding Mismatch");
+		        		CigarEnum::Mismatch
 		        	}else {
 		        		// match
-		        		println!("adding Match");
-		        		path.push(CigarEnum::Match);
+		        		//println!("adding Match");
+		        		CigarEnum::Match
 		        	}
-		            i -= 1;
-		            j -= 1;
 		        } else if max == up_score {
-		        	println!("adding Deletion");
-		        	path.push(CigarEnum::Insertion);
 		            i -= 1;
+		        	//println!("adding Deletion");
+		        	CigarEnum::Insertion
 		        } else {
-		        	println!("adding Insertion");
-		            path.push(CigarEnum::Deletion);
 		            j -= 1;
-		        }
+		        	//println!("adding Insertion");
+		            CigarEnum::Deletion
+		        };
+
+		        if let Some(tuple) = path.last_mut() {
+				    if tuple.is_a(&option) {
+				        tuple.vec_len += 1;
+				    } else {
+				        path.push(CigarTuple::from_scratch(option, 1));
+				    }
+				} else {
+				    unreachable!();
+				}
 		    }
 
 		    // If there are remaining gaps at the beginning of the sequences, fill them with the corresponding directions
-		    while i > 0 {
-		    	println!("End not reached by main - adding INSERTION");
-		        path.push(CigarEnum::Insertion);
-		        i -= 1;
-		    }
+		    if i > 0 {
+		    	let option = CigarEnum::Insertion;
+		    	if let Some(tuple) = path.last_mut() {
+				    if tuple.is_a(&option) {
+				        tuple.vec_len += i;
+				    } else {
+				        path.push(CigarTuple::from_scratch(option, 1));
+				    }
+				} else {
+				    unreachable!();
+				}
+			}
 
-		    while j > 0 {
-		    	println!("End not reached by main - adding DELETION");
-		        path.push(CigarEnum::Deletion);
-		        j -= 1;
+		    if j > 0 {
+		    	//println!("End not reached by main - adding DELETION");
+		    	let option = CigarEnum::Deletion;
+		    	if let Some(tuple) = path.last_mut() {
+				    if tuple.is_a(&option) {
+				        tuple.vec_len += j;
+				    } else {
+				        path.push(CigarTuple::from_scratch(option, 1));
+				    }
+				} else {
+				    unreachable!();
+				}
 		    }
 
 		    path.reverse();

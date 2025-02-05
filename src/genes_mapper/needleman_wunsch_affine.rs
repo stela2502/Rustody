@@ -3,7 +3,7 @@ const MISMATCH_SCORE: i32 = -2;
 const GAP_OPEN_PENALTY: i32 = -5; // Penalty for opening a gap
 const GAP_EXTENSION_PENALTY: i32 = -4; // Penalty for extending a gap
 
-use crate::genes_mapper::cigar::{Cigar, CigarEnum};
+use crate::genes_mapper::cigar::{Cigar, CigarEnum, CigarTuple};
 use crate::traits::BinaryMatcher;
 
 use std::fs::File;
@@ -69,7 +69,7 @@ impl <'a> NeedlemanWunschAffine {
     	format!("alignement:\n{}",self.cigar.as_alignement(read, database ))
 	}
 
-	pub fn int_state_to_string<T>( &mut self, read: &T, database: &T, cigar_vec: &[CigarEnum] ) -> String 
+	pub fn int_state_to_string<T>( &mut self, read: &T, database: &T, cigar_vec: &[CigarTuple] ) -> String 
 	where
     T: BinaryMatcher + std::fmt::Display{
     	self.cigar.reset_fom_path( cigar_vec );
@@ -110,6 +110,7 @@ impl <'a> NeedlemanWunschAffine {
 		            }else {
 						GAP_OPEN_PENALTY
 		            };
+		            //let gap_open_penalty = GAP_OPEN_PENALTY;
 
 		            // Compute the maximum score directly
 		            self.dp[i][j] = [
@@ -142,6 +143,8 @@ impl <'a> NeedlemanWunschAffine {
 	where
     T: BinaryMatcher {
 		//let (mut i, mut j) = (read.len(), database.len());
+
+
 		let (mut i, mut j);
 	    let mut align_read = Vec::<u8>::with_capacity( cig_vec.len() );
 	    let mut align_database = Vec::<u8>::with_capacity( cig_vec.len() );
@@ -255,6 +258,8 @@ impl <'a> NeedlemanWunschAffine {
 
     	//println!("needleman_wunsch_affine::to_cigar_vec is called.");
 
+    	//self.cigar.calculate_cigar( &self.dp, read.get_nucleotide_2bit(read.len()-1) == database.get_nucleotide_2bit(database.len() -1) );
+		
 		let (mut i, mut j) = (read.len(), database.len());
 
 		if self.cigar.len() == i.max(j) {
@@ -262,93 +267,126 @@ impl <'a> NeedlemanWunschAffine {
 			return;
 		}
 			
+		let mut path = Vec::<CigarTuple>::with_capacity(i.max(j));	    
+		let mut rev_id = i.max(j).saturating_sub(1);
 
-	    let mut cigar = vec![CigarEnum::Empty;i.max(j)];
-	    
-	    let mut rev_id = cigar.len().saturating_sub(1);
-
+		//if read.get_nucleotide_2bit(0) == database.get_nucleotide_2bit(0)
 
 	    while i > 0 || j > 0 {
 
 	    	//if let (Some(nuc1), Some(nuc2)) = (read.get_nucleotide_2bit(i.saturating_sub(1)), database.get_nucleotide_2bit(j.saturating_sub(1)) ){
-	    		let this_value = self.dp[i][j];
+    		let this_value = self.dp[i][j];
+    		#[cfg( debug_assertions )]
+    		if self.debug {
+    			println!("I am testing this part of the dp matrix with the lower right corner i:{i};j:{j}:\n{}\t{}\n{}\t{}",
+	    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
+	    			self.dp[i.saturating_sub(1)][j],self.dp[i][j]
+	    			);
+    		}
+	    	if let Some((max_index, max_value)) = vec![
+	    	self.dp[i.saturating_sub(1)][j.saturating_sub(1)], 
+	    	self.dp[i.saturating_sub(1)][j],
+	    	self.dp[i][j.saturating_sub(1)]
+	    	].iter().enumerate().max_by_key(|(_, &val)| val) {
+	    		let option = match max_index{
+	    		//cigar[rev_id] = match max_index{
+	    			0 => {
+	    				// a match or a mismatch self.dp[i.saturating_sub(1)][j.saturating_sub(1)]
+	    				i = i.saturating_sub(1);
+	    				j =j.saturating_sub(1);
+	    				if  *max_value == this_value - MATCH_SCORE {
+	    					CigarEnum::Match
+	    				}else {
+	    					CigarEnum::Mismatch
+	    				}
+	    			},
+	    			1=>{
+	    				// an insertion is most likely
+	    				i = i.saturating_sub( 1 );
+	    				CigarEnum::Insertion
+	    			},
+	    			2=> {
+	    				// a deletion is most likely
+	    				j = j.saturating_sub(1);
+	    				CigarEnum::Deletion
+	    			},
+	    			_ => unreachable!()
+	    		};
+	    		if let Some(tuple) = path.last_mut() {
+				    if tuple.is_a(&option) {
+				        tuple.vec_len += 1;
+				    } else {
+				    	//println!("After {} we start with an option {}", tuple, option);
+				        path.push(CigarTuple::from_scratch(option, 1));
+				    }
+				} else {
+				    path.push(CigarTuple::from_scratch(option, 1));
+				}
 	    		#[cfg( debug_assertions )]
-	    		if self.debug {
-	    			println!("I am testing this part of the dp matrix with the lower right corner i:{i};j:{j}:\n{}\t{}\n{}\t{}",
-		    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
-		    			self.dp[i.saturating_sub(1)][j],self.dp[i][j]
-		    			);
+	    		if self.debug{
+	    			println!("inserted one additional to the last elemet {:?}",  path.last() );
 	    		}
-		    	if let Some((max_index, max_value)) = vec![
-		    	self.dp[i.saturating_sub(1)][j.saturating_sub(1)], 
-		    	self.dp[i.saturating_sub(1)][j],
-		    	self.dp[i][j.saturating_sub(1)]
-		    	].iter().enumerate().max_by_key(|(_, &val)| val) {
-		    		cigar[rev_id] = match max_index{
-		    			0 => {
-		    				// a match or a mismatch self.dp[i.saturating_sub(1)][j.saturating_sub(1)]
-		    				i = i.saturating_sub(1);
-		    				j =j.saturating_sub(1);
-		    				if  *max_value == this_value - MATCH_SCORE {
-		    					CigarEnum::Match
-		    				}else {
-		    					CigarEnum::Mismatch
-		    				}
-		    			},
-		    			1=>{
-		    				// an instertion is most likely
-		    				i = i.saturating_sub( 1 );
-		    				CigarEnum::Insertion
-		    			},
-		    			2=> {
-		    				// a deletion is most likely
-		    				j = j.saturating_sub(1);
-		    				CigarEnum::Deletion
-		    			},
-		    			_ => unreachable!()
-		    		};
-		    		#[cfg( debug_assertions )]
-		    		if self.debug{
-		    			println!("inserted the value {} at position {rev_id}", &cigar[rev_id] );
-		    		}
-		    		/*println!("Here ({i};{j} I had a max index of {max_index} and a max value of {max_value} and decided on a {} with read:{:?} and query:{:?}",
-		    			cigar[rev_id], read.get_nucleotide_2bit(i), database.get_nucleotide_2bit(j) );
-		    		println!("This is the the matrix that lead to that:\n\n{}\t{}\n{}\t*{}*",
-		    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
-		    			self.dp[i.saturating_sub(1)][j],self.dp[i][j] );
-		    		*/
-		    		
-		    	}else {
-		    		panic!("I can not decode the df matrix to a Cigar state at :{i}; j{j}:\n{}\t{}\n{}\t*{}*",
-		    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
-		    			self.dp[i.saturating_sub(1)][j],self.dp[i][j]
-		    			);
-		    	}
-		    //}
-		    if rev_id > 0 {
+	    		/*println!("Here ({i};{j} I had a max index of {max_index} and a max value of {max_value} and decided on a {} with read:{:?} and query:{:?}",
+	    			cigar[rev_id], read.get_nucleotide_2bit(i), database.get_nucleotide_2bit(j) );
+	    		println!("This is the the matrix that lead to that:\n\n{}\t{}\n{}\t*{}*",
+	    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
+	    			self.dp[i.saturating_sub(1)][j],self.dp[i][j] );
+	    		*/
+	    		
+	    	}else {
+	    		panic!("I can not decode the df matrix to a Cigar state at :{i}; j{j}:\n{}\t{}\n{}\t*{}*",
+	    			self.dp[i.saturating_sub(1)][j.saturating_sub(1)], self.dp[i][j.saturating_sub(1)],
+	    			self.dp[i.saturating_sub(1)][j],self.dp[i][j]
+	    			);
+	    	}
+		    /*if rev_id > 0 {
 		    	rev_id -= 1;
-		    } else if i > 0 || j > 0  {
-		    	// we have estimated the wrong path length!
-		    	//eprintln!( "You tried to match a read to a database entry where the lenth of both entries did not fit! This needs to be improved on!\n{}\n{}\ni:{}; j:{}",
-		    	//	read, database, i , j);
-		    	cigar.insert(0, CigarEnum::Empty);
-		    	#[cfg(debug_assertions)]
-		    	println!("Inserting a new CigarEnum::Empty at position 0 (i:{i}; j:{j})");
-		    	//self.debug = true;
-		    }   
+		    }else if rev_id == 0{
+		    	if i > 0 {
+			    	let option = CigarEnum::Insertion;
+			    	if let Some(tuple) = path.last_mut() {
+					    if tuple.is_a(&option) {
+					        tuple.vec_len += i;
+					    } else {
+					        path.push(CigarTuple::from_scratch(option, 1));
+					    }
+					} else {
+					    unreachable!();
+					}
+				}if j > 0 {
+			    	//println!("End not reached by main - adding DELETION");
+			    	let option = CigarEnum::Deletion;
+			    	if let Some(tuple) = path.last_mut() {
+					    if tuple.is_a(&option) {
+					        tuple.vec_len += j;
+					    } else {
+					        path.push(CigarTuple::from_scratch(option, 1));
+					    }
+					} else {
+					    unreachable!();
+					}
+			    }
+			    break;
+			} */
 	    }
 
-	    if rev_id != 0 {
-	    	panic!("We have not filled in all the values here!?!?");
-	    }
-
-		self.cigar.reset_fom_path ( &cigar );
-		self.cigar.fix_di_problems (0, read, database );
+	    //if rev_id != 0 {
+	    //	panic!("We have not filled in all the values here!?!?");
+	    //}
+	    let rev: Vec<_> = path.into_iter().rev().collect();
+		self.cigar.reset_fom_path ( &rev );
 		
+		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		{
+			println!("        nascent cigar string:\n{}", self.cigar.as_alignement(read, database ));
+	    }
+		self.cigar.fix_di_problems (0, read, database );
+
+		self.cigar.finalize();
+		self.cigar.check_alignment( read, database);
 		( self.cigar.dropped_start, self.cigar.dropped_end ) = read.get_dropped_values();
 		
-	    //println!("{}", cig.as_alignement( read, database ) );
-
+		
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		{
 			println!("del/ins remapped cigar string:\n{}", self.cigar.as_alignement(read, database ));
@@ -367,25 +405,25 @@ impl <'a> NeedlemanWunschAffine {
 
 
 
-// Function to export DP matrix to a file
-pub fn export_dp_matrix(&self, file_path: &str) -> io::Result<()> {
-    let mut file = match File::create(file_path) {
-    	Ok(file) => file,
-    	Err(err) => {
-    		eprintln!( "Trying to write th dp matrix of a needleman wunsch affine mapping I hit this file system error:\n{err:?}");
-    		// this is not too crucial here and it would be a shame to kill the whole process over this!
-    		return Ok(()) 
-    	},
-    };
+	// Function to export DP matrix to a file
+	pub fn export_dp_matrix(&self, file_path: &str) -> io::Result<()> {
+	    let mut file = match File::create(file_path) {
+	    	Ok(file) => file,
+	    	Err(err) => {
+	    		eprintln!( "Trying to write th dp matrix of a needleman wunsch affine mapping I hit this file system error:\n{err:?}");
+	    		// this is not too crucial here and it would be a shame to kill the whole process over this!
+	    		return Ok(()) 
+	    	},
+	    };
 
-    for row in &self.dp {
-        let row_str: Vec<String> = row.iter().map(|&val| val.to_string()).collect();
-        let row_line = row_str.join("\t");
-        writeln!(file, "{}", row_line)?;
-    }
-    println!("I have exported the needleman wunsch affine primary matrix to {file_path}");
-    Ok(())
-}
+	    for row in &self.dp {
+	        let row_str: Vec<String> = row.iter().map(|&val| val.to_string()).collect();
+	        let row_line = row_str.join("\t");
+	        writeln!(file, "{}", row_line)?;
+	    }
+	    println!("I have exported the needleman wunsch affine primary matrix to {file_path}");
+	    Ok(())
+	}
 
 
 }
