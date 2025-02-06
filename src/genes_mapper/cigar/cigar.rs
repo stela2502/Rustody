@@ -155,7 +155,7 @@ impl Cigar{
 
     /// splits the cigar string into CigarTuples. They are a representation of the (\d+)([MIDX]),
     /// but also store their position in both the Vec<CigarEnum> and the cigar.cigar string.
-	fn to_cigar_tupel_vec( &self, only_gaps:bool ) -> Vec<CigarTuple> {
+	pub fn to_cigar_tupel_vec( &self, only_gaps:bool ) -> Vec<CigarTuple> {
 
 		let re = CigarEnum::get_regex(); // Example CIGAR regex
 		let mut cigar_tuples = Vec::with_capacity( self.state_changes );
@@ -458,6 +458,8 @@ impl Cigar{
     	self.reset_fom_path( &path );
     }
 
+    #[allow(dead_code)]
+    /// expand a CigarTupe vector into a CigarEnum Vector
     fn expand_cigar_tuple_vec( vec: &[CigarTuple]) -> Vec<CigarEnum> {
     	let mut ret = Vec::<CigarEnum>::with_capacity( vec.into_iter().map(|v| v.len() ). sum::<usize>() );
     	for option in vec {
@@ -466,6 +468,7 @@ impl Cigar{
     	ret
     }
 
+    /// collapse a CigarTupe vector into a CigarEnum Vector
     fn collapse_cigar_enum_vec( vec: &[CigarEnum] ) -> Vec<CigarTuple> {
     	let mut path = Vec::<CigarTuple>::with_capacity( 30 );
     	for option in vec {
@@ -651,6 +654,34 @@ impl Cigar{
 		self.fixed = Some( CigarEndFix::Na );
 	}
 
+
+	/// checks if a deletion or insertion would be beneficial for a (modified) mapping
+	/// by checking if the (at least) 2 bp flanking on each side would be mapping with the deletion
+	pub fn is_good_gap<T>(&self, gap:&CigarTuple, read:&T, database:&T )->bool 
+	where
+	T: BinaryMatcher{
+		//println!("is_good_gap? read_pos {}; database_pos {}\n{}", gap.read_position, gap.database_position, self.as_alignement( read, database) );
+
+		if gap.option == CigarEnum::Insertion{
+			let match_to_start = self.neg_look_ahead(read, database, 
+				gap.read_position-1, gap.database_position-1 );
+			let match_behind = self.neg_look_ahead(read, database, 
+				gap.read_position + gap.len() +1, gap.database_position + 1);
+
+			match_to_start > 1 && match_behind == 2
+
+		}else if gap.option == CigarEnum::Deletion {
+			let match_to_start = self.neg_look_ahead(read, database, 
+				gap.read_position-1, gap.database_position-1 );
+			let match_behind = self.neg_look_ahead(read, database, 
+				gap.read_position +1, gap.database_position + gap.len() +1 );
+
+			match_to_start > 1 && match_behind == 2
+		}else {
+			false
+		}
+	}
+
 	/// fills in matches entries in cigar_tuple_vec with current_tuple while ignoring not_touch and removing not_touch.opposite()
 	/// It starts at id and tranverses the vector in reverse.
 	/// returns the amount of entries that would need to be flipped back - if applicable and the id to start at if
@@ -767,22 +798,7 @@ impl Cigar{
 			}else if cigar_tuple_vec[this].option.opposite(&flip_to) {
 				// here we need to be extremely careful!
 				// would that actually benefit the match?!
-				let test = if cigar_tuple_vec[this].option == CigarEnum::Insertion{
-					let match_to_start = self.neg_look_ahead(read, database, cigar_tuple_vec[this].read_position, cigar_tuple_vec[this].database_position );
-					let match_behind = self.neg_look_ahead(read, database, cigar_tuple_vec[this].read_position, cigar_tuple_vec[this].database_position );
-					if match_to_start > 1 && match_behind != 2 {
-						true
-					}else {
-						false
-					}
-				}else if cigar_tuple_vec[this].option == CigarEnum::Deletion {
-					self.neg_look_ahead(read, database, cigar_tuple_vec[this].read_position -1, cigar_tuple_vec[this].database_position -1 ) > 1
-					&&
-				   self.neg_look_ahead(read, database, cigar_tuple_vec[this].read_position +1, cigar_tuple_vec[this].database_position +1 ) == 2
-				}else {
-					false
-				};
-				if test
+				if self.is_good_gap( &cigar_tuple_vec[this], read, database )
 				{
 					// this deletion would actually benefit the alignement.
 					#[cfg(all(debug_assertions, feature = "detailed_mapping_debug"))]

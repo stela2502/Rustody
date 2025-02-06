@@ -10,6 +10,7 @@ pub mod needleman_wunsch_affine;
 
 pub mod cigar;
 
+pub use gene_data::GeneData as GeneData;
 pub use genes_mapper::GenesMapper as GenesMapper;
 pub use cigar::Cigar as Cigar;
 pub use crate::genes_mapper::mapper_result::MapperResult as MapperResult;

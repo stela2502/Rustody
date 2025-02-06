@@ -268,7 +268,7 @@ impl <'a> NeedlemanWunschAffine {
 		}
 			
 		let mut path = Vec::<CigarTuple>::with_capacity(i.max(j));	    
-		let mut rev_id = i.max(j).saturating_sub(1);
+		//let mut rev_id = i.max(j).saturating_sub(1);
 
 		//if read.get_nucleotide_2bit(0) == database.get_nucleotide_2bit(0)
 

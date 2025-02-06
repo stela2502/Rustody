@@ -5,7 +5,6 @@ use crate::errors::MappingError;
 
 use crate::genes_mapper::gene_data::GeneData;
 use crate::genes_mapper::gene_link::GeneLink;
-use crate::genes_mapper::Cigar;
 use crate::genes_mapper::MapperResult;
 use crate::genes_mapper::MultiMatch;
 use crate::genes_mapper::CigarEndFix;

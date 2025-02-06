@@ -5,6 +5,35 @@
 mod tests {
 	use rustody::genes_mapper::Cigar;
 	use rustody::genes_mapper::cigar::{CigarEnum, CigarEndFix, CigarTuple};
+	//easiest class with BinaryMatcher
+	use rustody::genes_mapper::GeneData;
+    use rustody::traits::BinaryMatcher;
+
+	#[test]
+	fn test_is_good_gap() {
+		let a = GeneData::new( b"AAACTGTTT", "a", "a_", "chr1", 1, false);
+		let b = GeneData::new( b"AAACGTTT", "b", "b_", "chr1", 1, false);
+		let cigar = Cigar::new( "4M1I4M" );
+		let vec = cigar.to_cigar_tupel_vec(false);
+		assert_eq!( cigar.is_good_gap( &vec[1], &a, &b ), true, "Insert gap is good? {}", cigar.as_alignement(&a, &b) );
+		let c = GeneData::new( b"TTTCGAAA", "c", "c_", "chr1", 1, false);
+		assert_eq!( cigar.is_good_gap( &vec[1], &a, &c ), false, "Insert gap is bad? {}", cigar.as_alignement(&a, &c) );
+
+		let cigar2 = Cigar::new( "4M1D4M" );
+		let vec2 = cigar2.to_cigar_tupel_vec(false);
+		assert_eq!( cigar2.is_good_gap( &vec2[1], &b, &a ), true, "Deletion gap is good? {}", cigar2.as_alignement(&b, &a) );
+		assert_eq!( cigar2.is_good_gap( &vec2[1], &c, &a ), false, "Deletion gap is bad? {}", cigar2.as_alignement(&c, &a) );
+	}
+
+	#[test]
+	fn test_is_bad_long_gap() {
+		let a = GeneData::new( b"TGGGGCCCCTGTCACTC", "a", "a_", "chr1", 1, false);
+	    let b = GeneData::new( b"TGGGGTCCCTGTCACTC", "b", "b_", "chr1", 1, false);
+	    let cigar = Cigar::new( "5M4D3I1M1I7M" );
+	    let vec = cigar.to_cigar_tupel_vec(false);
+
+	    assert_eq!( cigar.is_good_gap( &vec[1], &a, &b ), false, "Insert gap is bad? {}", cigar.as_alignement(&a, &b) );
+	}
 
 
 	#[test]
