@@ -19,6 +19,8 @@ pub struct MapperResult{
 	gene_name:String,
     /// the length of the database entry - is necessary to estimate if a short match is good enough (e.g. sampleid or AB tag)
     db_length: usize,
+    // has the read been clipped to obtain this match?!
+    //clipped: (usize, usize),
 
 }
 
@@ -49,7 +51,9 @@ impl Default for MapperResult {
 
 
 impl MapperResult{
-	pub fn new( gene_id:usize, start: usize, multimapper:bool, cigar:Option<Cigar>, mapq:u8, nw:f32,score:usize, edit_dist:f32, name:&str, db_length:usize ) -> Self{
+	pub fn new( gene_id:usize, start: usize, multimapper:bool, cigar:Option<Cigar>,
+        mapq:u8, nw:f32,score:usize, edit_dist:f32, name:&str, db_length:usize, 
+     ) -> Self{
 
         Self{
 			gene_id,

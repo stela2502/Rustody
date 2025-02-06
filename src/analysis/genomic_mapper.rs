@@ -383,7 +383,8 @@ impl AnalysisGenomicMapper{
 		                        match minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq, &self.genes ) {
 		                        	Some(sam_line) => bam.push( sam_line ),
 		                        	None => {
-		                        		eprintln!("There has been an error in the build_sam_record() function - please check what went wrong with this sequence data:\n{}\nand this the cell sequence:\n{}\n",&data[i].1, &data[i].0 );
+		                        		// likely a really really crappy mapping anyhow - so just ignore that
+		                        		// eprintln!("There has been an error in the build_sam_record() function - please check what went wrong with this sequence data:\n{}\nand this the cell sequence:\n{}\n",&data[i].1, &data[i].0 );
 		                        	}
 		                        }
 		                    },
@@ -458,10 +459,12 @@ impl AnalysisGenomicMapper{
         };
 
     	let mut writer = BufWriter::new(file);
-    	let mut header = "@HD\tVN:1.4\tSO:coordinate\n".to_string();
+    	let mut header = Vec::<String>::with_capacity(6);
+    	header.push("@HD\tVN:1.4\tSO:coordinate".to_string());
+
     	let mut fasta= "".to_string();
     	if let Some((h,f)) = self.genes.sam_header(){
-    		header += &h;
+    		header.push(h);
     		fasta += &f;
     	}
     	if ! fasta.is_empty(){
@@ -479,14 +482,14 @@ impl AnalysisGenomicMapper{
 	    }
     	// this is just a copy from a real Illumina bam file - I also use the Sample4 as sample in my bam export.
     	// So if that is changed this header part needs to also change!
-    	header += "@RG\tID:Sample4:0:1:HN2CKBGX9:1\tSM:Sample4\tLB:0.1\tPU:Sample4:0:1:HN2CKBGX9:1\tPL:ILLUMINA\n";
+    	header.push("@RG\tID:Sample4:0:1:HN2CKBGX9:1\tSM:Sample4\tLB:0.1\tPU:Sample4:0:1:HN2CKBGX9:1\tPL:ILLUMINA".to_owned());
     	let args: Vec<String> = env::args().collect();
     	let program = args[0].to_string();
 		let command_line: String = args.join(" ");
 
-		header += &format!("@PG\tPN:{}\tID:{}\tVN:{}\tCL:{}",&program, &program, &VERSION, command_line);
+		header.push( format!("@PG\tPN:{}\tID:{}\tVN:{}\tCL:{}",&program, &program, &VERSION, command_line) );
 
-		match writeln!(writer, "{}", header){
+		match writeln!(writer, "{}", header.join("\n")){
     		Ok(_) => (),
     		Err(err) => panic!("Could not write the header line: {err:?}"),
     	};

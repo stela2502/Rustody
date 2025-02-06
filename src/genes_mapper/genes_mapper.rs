@@ -122,33 +122,37 @@ impl GenesMapper{
 	// sam_header will return both the header string as well as the fasta database to that
 	pub fn sam_header(&self) -> Option<(String, String)>{
 		
+		let mut vec = Vec::<String>::with_capacity( self.genes.len() );
+		let mut fasta = "".to_string();
+
 		if let Some(hash) = &self.report4{
-			let mut vec = Vec::<String>::with_capacity( hash.len() );
-			let mut fasta = "".to_string();
+			
 			for &id in hash {
 				let gene_name = &self.genes[id].get_unique_name();
 				let gene_len = self.genes[id].len();
 				let formatted_line = format!("@SQ\tSN:{}\tLN:{}", gene_name, gene_len);
 				vec.push(formatted_line);
 				fasta+= &self.genes[id].to_fasta();
-
 			}
-			let ret = vec.join("\n") + "\n";
-			Some((ret, fasta))
+			
+			
 		}else {
-			let mut vec = Vec::<String>::with_capacity( self.genes.len() );
-			let mut fasta = "".to_string();
-			for  gene_obj in &self.genes {
+			for gene_obj in &self.genes {
 				let gene_name = gene_obj.get_unique_name();
 				let gene_len = gene_obj.len();
 				let formatted_line = format!("@SQ\tSN:{}\tLN:{}", gene_name, gene_len);
 				vec.push(formatted_line);
 				fasta+= &gene_obj.to_fasta();
 			}
-			let ret = vec.join("\n") + "\n";
+		}
+		if vec.len() > 0 {
+			let ret = vec.join("\n");
 			Some((ret, fasta))
+		}else {
+			None
 		}
 	}
+
 
 
 	pub fn set_min_matches( &mut self, val:usize) {
@@ -541,8 +545,7 @@ impl GenesMapper{
 					println!("the alignement:\n{}",nwa.to_string( &read, &database, self.highest_humming_val ));
 				}
 
-				if nwa.cigar.mapping_quality() > 20 && nwa.cigar.state_changes() < 10 ||  
-					nwa.cigar.mapping_quality() > 30 && nwa.cigar.state_changes() < 15 {
+				if	nwa.cigar.mapping_quality() > 35 && nwa.cigar.state_changes() < 15 {
 
 					#[cfg(debug_assertions)]
 					if self.debug{

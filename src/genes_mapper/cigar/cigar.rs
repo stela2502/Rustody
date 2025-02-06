@@ -153,19 +153,24 @@ impl Cigar{
 		}
     }
 
+
     /// splits the cigar string into CigarTuples. They are a representation of the (\d+)([MIDX]),
     /// but also store their position in both the Vec<CigarEnum> and the cigar.cigar string.
 	pub fn to_cigar_tupel_vec( &self, only_gaps:bool ) -> Vec<CigarTuple> {
+		self.str_to_tuple_vec( &self.cigar, self.state_changes, only_gaps)
+	}
+
+    fn str_to_tuple_vec( &self, cig:&str, state_changes:usize, only_gaps:bool ) -> Vec<CigarTuple> {
 
 		let re = CigarEnum::get_regex(); // Example CIGAR regex
-		let mut cigar_tuples = Vec::with_capacity( self.state_changes );
+		let mut cigar_tuples = Vec::with_capacity( state_changes );
 		let mut vec_pos = 0;
 		let mut str_pos = 0;
 		let mut read_pos = 0;
 		let mut database_pos = 0;
 
 	    // Iterate through matches of the regular expression
-	    for cap in re.captures_iter(&self.cigar) {
+	    for cap in re.captures_iter( cig ) {
 
 			let length: usize = cap[1].parse().unwrap();
             let cigar_tuple = CigarTuple::from_match( &cap, vec_pos, str_pos, read_pos, database_pos );
@@ -486,10 +491,14 @@ impl Cigar{
     	path
     }
 
-    pub fn to_sam_string(&self) -> (String,  usize ){
+    pub fn to_sam_string(&mut self, length:usize ) -> Option<(String,  usize )>
+    {
+
+    	self.fixed=None;
+    	self.soft_clip_start_end();
     	let mut ret = self.cigar.to_string();
 
-		let re_start = Regex::new(r"^(\d+)([ID])").unwrap();
+		/*let re_start = Regex::new(r"^(\d+)([ID])").unwrap();
 
 		let move_start = if let Some(mat) =re_start.captures(&ret) {
 			let clippable = mat.get(1).unwrap();
@@ -528,7 +537,7 @@ impl Cigar{
 				},
 				_ => unreachable!()
 			}
-		}
+		}*/
 
 		// and now we need to handle the possibiliity that the mapper has cut parts of our string, too.
 		if self.dropped_start > 0 {
@@ -537,8 +546,15 @@ impl Cigar{
 		if self.dropped_end > 0 {
 			ret += &format!("{}H", self.dropped_end);
 		}
+
 		// todo("If the start Clips would change the positions?")
-		return (ret, move_start )
+		let (mine, _other) = self.calculate_covered_nucleotides( &ret );
+		if mine != length {
+			// likely a really really crappy mapping anyhow - so just ignore that
+		    // eprintln!("The cigar does not have the correct length {}! {}", length, ret );
+			return None
+		}
+		return Some( (ret, 0 ) )
     }
 
     /// The new mapper likes to add DDJJ elements that are basically

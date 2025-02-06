@@ -9,6 +9,15 @@ mod tests {
 	use rustody::genes_mapper::GeneData;
     use rustody::traits::BinaryMatcher;
 
+    #[test]
+    fn simple_stupid_clone_test(){
+    	let mut original = Cigar::new( "30M" );
+    	original.dropped_start = 5;
+    	original.dropped_end = 10;
+    	let copy = original.clone();
+    	assert_eq!( original, copy, "Clone copied also the dropped values");
+    }
+
 	#[test]
 	fn test_is_good_gap() {
 		let a = GeneData::new( b"AAACTGTTT", "a", "a_", "chr1", 1, false);
@@ -65,13 +74,13 @@ mod tests {
 		let mut obj = Cigar::default();
 
 		obj.restart_from_cigar("1D15M1I30M");
-		let fixed = obj.to_sam_string();
+		let fixed = obj.to_sam_string(46);
 
-		assert_eq!( fixed, ("15M1I30M".to_string(),1 ), "internal insert overhanging D fixed at start");
+		assert_eq!( fixed, ("1D15M1I30M".to_string(),0 ), "internal insert overhanging D fixed at start");
 		
 		obj.restart_from_cigar("15M1I30M1D");
-		let fixed = obj.to_sam_string();
-		assert_eq!( fixed, ("15M1I30M".to_string(),0 ), "internal insert overhanging D fixed at end");
+		let fixed = obj.to_sam_string(46);
+		assert_eq!( fixed, ("15M1I30M1D".to_string(),0 ), "internal insert overhanging D fixed at end");
 	}
 
 	#[test]

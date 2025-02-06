@@ -21,10 +21,11 @@ impl MinimalSam {
 			bam_flag.set_secondary(true);
 		}
     	let ( cigar_str, start) = match gene_id[0].cigar() {
-    		Some(cigar) => 
+    		Some( cigar ) => 
     		{
     			//let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.cigar );
-    			let (sam_str, start) = cigar.to_sam_string();
+    			let mut cig = cigar.clone();
+    			let (sam_str, start) = cig.to_sam_string(read.len())?;
     			(sam_str, start +  gene_id[0].start() )
     		},
     		None=> {
