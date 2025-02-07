@@ -22,14 +22,15 @@ use rustody::ofiles::Ofiles;
 /// You need quite long R1 and R2 reads for this! (>70R1 and >70R2 \[v1\] and 52 bp reads for v2.96 and v2.384)
 
 #[derive(Parser)]
+#[clap(disable_version_flag = true)]  // This prevents the automatic --version
 #[clap(version = "1.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
-    #[clap(short, long)]
-    reads: String,
+    #[clap(short, long, value_parser, num_args(1..), value_delimiter = ' ')]
+    reads: Vec<String>,
     /// the input R2 samples file
-    #[clap(short, long)]
-    file: String,
+    #[clap(short, long, value_parser, num_args(1..), value_delimiter = ' ')]
+    file: Vec<String>,
     /// a pre-defined index folder produced by the cerateIndex scipt
     #[clap(short, long)]
     index: Option<String>,
@@ -106,6 +107,10 @@ fn main() {
     let now = SystemTime::now();
     
     let opts: Opts = Opts::parse();
+
+    if ! opts.reads.len() == opts.file.len() {
+        panic!("Sorry I need exatly the same amount of R1 and R2 fastq files!");
+    }
 
     if fs::metadata(&opts.outpath).is_err() {
         if let Err(err) = fs::create_dir_all(&opts.outpath) {
@@ -202,16 +207,9 @@ fn main() {
         worker.write_index( &opts.outpath );
     }
 
-    let mut split1 = opts.reads.split(',');
-    let mut split2 = opts.file.split(',');
-    let mut id = 0;
-    for f1 in split1.by_ref(){
-        if let Some(f2) = split2.next(){
-            id += 1;
-            println!("\nParsing file pair {id}\n");
-            worker.parse_parallel( f1, f2, &mut results, pos, min_sizes, &opts.outpath, opts.max_reads ,opts.chunk_size );
-        }
-        
+    for id in 0..opts.reads.len() {
+        println!("\nParsing file pair {id}\n");
+        worker.parse_parallel( &opts.reads[id], &opts.file[id], &mut results, pos, min_sizes, &opts.outpath, opts.max_reads ,opts.chunk_size );
     }
 
     //worker.parse_parallel( &opts.reads, &opts.file, &mut results, pos, min_sizes, &opts.outpath );

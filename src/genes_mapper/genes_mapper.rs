@@ -491,7 +491,9 @@ impl GenesMapper{
 		    }
 		});
 
+		res_vec.truncate(4); // Keep only the top 4 elements
 		res_vec
+
     }
 
     pub fn get_strict(&self, seq: &[u8], _cellid:u32, nwa: &mut NeedlemanWunschAffine ) ->  Result< Vec<MapperResult>, MappingError >{ 
@@ -512,8 +514,8 @@ impl GenesMapper{
 	    //res_vec.sort_by(|(_, a), (_, b)| b.len().cmp(&a.len()));
 	    #[cfg(debug_assertions)]
 		if self.debug {
-			let to=9.min(res_vec.len());
-			println!("I have collected these initial matches (first 10): {:?}", &res_vec[0..to] );
+			// will get max 4 now...
+			println!("I have collected these initial matches (first 10): {:?}", &res_vec );
 		}
 	    //let mut cigar= Cigar::new("");
 	    //cigar.set_debug( nwa.debug() ); // propagate the debug setting from the nwa object
@@ -523,11 +525,13 @@ impl GenesMapper{
 
 		// collect all possible matches
 		#[allow(unused_variables)]
-	    for ((gene_id, start), count) in &res_vec {
+	    for id in 0..res_vec.len() {
 
-	    	if let Some(( read, database)) = self.slice_objects( *start, &read_data, &self.genes[*gene_id] ){
+            let ((gene_id, start), count) = res_vec[id];
+
+	    	if let Some(( read, database)) = self.slice_objects( start, &read_data, &self.genes[gene_id] ){
 	    		
-	    		if (read.len() as f32) < (read_data.len() as f32 * 0.8) && (read.len() as f32) < (self.genes[*gene_id].len() as f32 * 0.9) {
+	    		if (read.len() as f32) < (read_data.len() as f32 * 0.8) && (read.len() as f32) < (self.genes[gene_id].len() as f32 * 0.9) {
 	    			// this database match is a little short!
 	    			#[cfg(debug_assertions)]
 					if self.debug{
@@ -554,10 +558,10 @@ impl GenesMapper{
 					
 					helper.push( 
 						MapperResult::new( 
-								*gene_id + self.offset, *start.max(&0) as usize, 
+								gene_id + self.offset, start.max(0) as usize, 
 							true, Some(nwa.cigar()), 
 							nwa.cigar.mapping_quality(), *nw, (nw*read.len() as f32) as usize,
-							nwa.cigar.edit_distance(), self.genes[*gene_id].get_name(), self.genes[*gene_id].len()
+							nwa.cigar.edit_distance(), self.genes[gene_id].get_name(), self.genes[gene_id].len()
 						)
 					);
 					
@@ -568,6 +572,11 @@ impl GenesMapper{
 					}
 				}
 				nwa.cigar.clear();
+				if let Some( (_, next_count)) = &res_vec.get(id+1){
+					if *next_count < count {
+						break;
+					}
+				}
 			};			
 
 		} // end populating helper

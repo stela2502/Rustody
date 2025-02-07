@@ -390,11 +390,11 @@ impl <'a> NeedlemanWunschAffine {
 		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 		{	
 			let mut cig = self.cigar.clone();
-			println!("del/ins remapped cigar string:\n{}\nstate changes: {}; mapping quality {}\nSam Cigar: {}", 
+			println!("del/ins remapped cigar string:\n{}\nstate changes: {}; mapping quality {}\nSam Cigar: {:?}", 
 				self.cigar.as_alignement(read, database ), 
 				self.cigar.state_changes(),
 				self.cigar.mapping_quality(),
-				cig.to_sam_string().0,
+				cig.to_sam_string(read.len()),
 				);
 	    }
 
