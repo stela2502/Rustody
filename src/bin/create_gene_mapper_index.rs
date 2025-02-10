@@ -63,6 +63,9 @@ struct Opts {
     /// how many threads to use to analyze this (default 1)
     #[clap(short, long)]
     num_threads: Option<usize>,
+    /// how many genes may an oligo link to (default 10)
+    #[clap(short, long)]
+    max_links: Option<usize>,
     /// the string to check for gene level names (default gene_name)
     #[clap(default_value="gene_name", long)]
     genename: String,
@@ -407,6 +410,11 @@ fn main() {
         Some(n) => *n,
         None => num_cpus::get(),
     };
+    let max_links = match &opts.max_links{
+        Some(n) => *n,
+        None => 10,
+    };
+
     // this needs to be run like that as the gene info is split over multiple lines. Therefore if we split
     // the gtf data up into random slices we loose the gene transcript exon connections!
     // In the future I could crete the genes and then create the index using multi processor approach.
@@ -463,8 +471,11 @@ fn main() {
         //report.merge( &gex.1 );
     }
     // remove all links that link to more than 24 different locations (rep elements)
-    index.purge( 24 );
-    index.make_index_te_ready(); 
+    //index.purge( 24 );
+    //index.make_index_te_ready(); 
+
+    // remove all links that link to more than max_links different locations (rep elements)
+    index.filter( max_links, num_threads, );
 
     report.stop_single_processor_time();
 
@@ -475,8 +486,9 @@ fn main() {
     //eprintln!("{h} h {m} min {s} sec and {ms} millisec since start");
     eprintln!("{}", report.program_states_string() );
 
-    eprintln!("We created this fast_mapper object:");
+    eprintln!("We created this genomic_mapper object:");
     index.print();
+
 
     index.write_index( &opts.outpath ).unwrap();
 

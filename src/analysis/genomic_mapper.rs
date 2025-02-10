@@ -572,7 +572,9 @@ impl AnalysisGenomicMapper{
     		else {
     			report.stop_file_io_time();
     			//eprintln!("Mapping one batch");
-    			pb.set_message( format!("mapping reads - {}", report.log_str() ) );
+    			let log_str = format!("mapping reads - {}", &report.log_str() );
+    			report.write_to_log( log_str.clone() );
+    			pb.set_message( log_str );
             	//eprintln!("I have {} lines of data and {} threads", good_reads.len(), self.num_threads);
 
     			good_read_count = 0;

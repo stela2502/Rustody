@@ -5,7 +5,9 @@ use std::collections::BTreeMap;
 
 use num_format::{Locale, ToFormattedString};
 
-use std::io::Write;
+use atty::is;
+
+use std::io::{Write};
 use std::time::{Duration, SystemTime};
 
 use chrono::{DateTime, Utc};
@@ -49,6 +51,8 @@ pub struct MappingInfo{
     pub subprocess_time: Duration,
     pub reads_log: BTreeMap<String, usize >,
     pub error_counts: HashMap<String, usize>,  // To store error types and their counts
+    // log should also print (if not likely to tty)
+    std_out_is_tty: bool,
 
 }
 
@@ -89,6 +93,8 @@ impl MappingInfo{
 			subprocess_time,
 			reads_log,
 			error_counts: HashMap::new(),  // Initialize the HashMap
+			std_out_is_tty: is(atty::Stream::Stdout) ,
+
 		};
 		this.start_counter();
 		this

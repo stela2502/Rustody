@@ -25,11 +25,11 @@ use rustody::ofiles::Ofiles;
 #[clap(version = "1.1.1", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
     /// the input R1 reads file
-    #[clap(short, long)]
-    reads: String,
+    #[clap(short, long, value_parser, num_args(1..), value_delimiter = ' ')]
+    reads: Vec<String>,
     /// the input R2 samples file
-    #[clap(short, long)]
-    file: String,
+    #[clap(short, long, value_parser, num_args(1..), value_delimiter = ' ')]
+    file: Vec<String>,
     /// a pre-defined index folder produced by the cerateIndex scipt
     #[clap(short, long)]
     index: Option<String>,
@@ -175,17 +175,12 @@ fn main() {
          println!("Setting the mapper highest_humming_val to {highest_humming_val}")
     }
 
-    let mut split1 = opts.reads.split(',');
-    let mut split2 = opts.file.split(',');
-    let mut id = 0;
-    for f1 in split1.by_ref(){
-        if let Some(f2) = split2.next(){
-            id += 1;
-            println!("\nParsing file pair {id}\n");
-            worker.parse_parallel( f1, f2, &mut results, pos, min_sizes, &opts.outpath, opts.max_reads ,opts.chunk_size );
-        }
-        
+
+    for id in 0..opts.reads.len() {
+        println!("\nParsing file pair {id}\n");
+        worker.parse_parallel( &opts.reads[id], &opts.file[id], &mut results, pos, min_sizes, &opts.outpath, opts.max_reads ,opts.chunk_size );
     }
+
 
     //worker.parse_parallel( &opts.reads, &opts.file, &mut results, pos, min_sizes, &opts.outpath );
 
