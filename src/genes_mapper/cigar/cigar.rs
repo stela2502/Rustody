@@ -49,13 +49,15 @@ pub struct Cigar{
 	pub dropped_start:usize,
 	/// keep track of how many bp have been sliced from this entry's end
 	pub dropped_end:usize,
+	/// should be another test - max match > (self.len() as f16 * 0.7) as usize
+	pub max_match: usize,
 
 }
 
 // Implementing Display trait for SecondSeq
 impl fmt::Display for Cigar {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Cigar {} - fixed {:?}; state changed {}; contains {:?}", self.cigar, self.fixed, self.state_changes, self.contains  )
+        write!(f, "Cigar {} - fixed {:?}; state changed {}; contains {:?} slice info {:?}", self.cigar, self.fixed, self.state_changes, self.contains ,( self.dropped_start, self.dropped_end) )
     }
 }
 
@@ -68,7 +70,9 @@ impl Default for Cigar {
             contains: vec![false;7],
             state_changes: 1000,
             dropped_start: 0,
-            dropped_end:0,        }
+            dropped_end:0,
+            max_match: 0,     
+        }
     }
 }
 
@@ -94,23 +98,39 @@ impl Ord for Cigar {
 impl Cigar{
 
 	pub fn new( cigar: &str ) -> Self{
-		let mut ret = Self{
-			cigar: cigar.to_owned(),
-			fixed:None,
-			debug:false,
-			contains: vec![false;7],
-			state_changes: 0,
-			dropped_start: 0,
-            dropped_end:0,
-		};
+
+		let mut ret = Self::default();
+		ret.cigar = cigar.to_string();
 		let vec = ret.to_cigar_tupel_vec(false);
-		ret = Self::default();
-		for tuple in &vec{
-			ret.state_changes +=1;
-			ret.contains[tuple.option.to_id()] = true;
-			ret.cigar += &tuple.to_string();
-		}
+
+		ret.reset_fom_path( &vec );
 		ret
+	}
+
+		/// converts a CigarEnum vector into a Cigar string and stores that internally.
+	/// This function also updated the contains vector.
+	pub fn reset_fom_path(&mut self, path: &[CigarTuple] ){
+
+		self.cigar.clear();
+
+		// boost and compact again:
+		//let corrected = Self::finalize( path );
+		self.state_changes = path.len();
+
+	    for tuple in path {
+	        self.cigar.push_str(&tuple.to_string());
+	        self.contains[tuple.option.to_id()] = true;
+	        if tuple.len() > self.max_match{
+				self.max_match = tuple.len();
+			}
+	    }
+	}
+
+	pub fn is_decent ( &self ) -> bool {
+		self.mapping_quality() > 30
+		&& self.state_changes < 5
+		|| self.max_match > (self.len() as f32 * 0.7) as usize
+		
 	}
 
 	pub fn better_as( &self, other: &Self ) -> bool{
@@ -273,7 +293,7 @@ impl Cigar{
     		//eprintln!("This cigar was already fixed!");
    			return ();
     	}
-    	( self.dropped_start, self.dropped_end ) = seq2.get_dropped_values();
+    	//( self.dropped_start, self.dropped_end ) = seq1.get_dropped_values();
     	self.fix_di_problems( 0, seq1, seq2 );
         //println!("Before the soft clip I have this result {self} for these sequences:{seq1}\n {seq2}\n");
         self.soft_clip_start_end();
@@ -599,13 +619,13 @@ impl Cigar{
     			if
     			// there are never two entries of the same type after each other
     			// and as there are only Insertion and Deletion elements they need to be either one of them
-    			cigar_tuple_vec[id].is_gap() 
+    			cigar_tuple_vec[id].is_gap()
+    			// If they are both that means we have a DI or ID combo!
     			&& cigar_tuple_vec[id.saturating_sub(1)].is_gap() 
     			// and the length of both of them needs to be the same
     			&& cigar_tuple_vec[id].len() == cigar_tuple_vec[id.saturating_sub(1)].len() 
     			{
     				//let len = cigar_tuple_vec[id].len();
-
     				let (on_read, on_db) = match cigar_tuple_vec[id].option{
     					CigarEnum::Insertion => {
     						( 
@@ -634,7 +654,9 @@ impl Cigar{
     					modified = true;
     					#[cfg(all(debug_assertions, feature = "mapping_debug"))]
 	    				{
-	    					println!("Foud a DI or ID problem! at read pos {:?} database_pos {:?}", on_read, on_db );
+	    					let mut tmp = self.clone();
+	    					tmp.reset_fom_path( &cigar_tuple_vec );
+	    					println!("Foud a DI or ID problem! at read pos {:?} database_pos {:?} - the result:\n{}", on_read, on_db, tmp.as_alignement(read, database) );
 	    					cigar_tuple_vec[id].print_debug();
 	    				}
     				}else {
@@ -945,6 +967,10 @@ impl Cigar{
 	fn fix_next_gap_location<T>( &mut self, read:&T, database:&T, skip: usize )
 	where
     T: BinaryMatcher{
+    	if self.state_changes > 30{
+    		//useless crap!
+    		return
+    	}
 
     	if self.contains[CigarEnum::Deletion.to_id()] || self.contains[CigarEnum::Insertion.to_id()]{
     		//println!("Fixing {} locations in this alignement:\n{}", this_option, self.as_alignement(read, database) );
@@ -952,7 +978,7 @@ impl Cigar{
     		//let mut skipped = skip;
     		let mut fixes = 0;
     		#[cfg(all(debug_assertions, feature = "mapping_debug"))]
-    		println!("Strting alignement:\n{}", self.as_alignement( read, database) );
+    		println!("Starting alignement:\n{}", self.as_alignement( read, database) );
     		let mut cigar_tuple_vec = self.to_cigar_tupel_vec( false );
     		if skip >= cigar_tuple_vec.len() -2 {
     			return;
@@ -1239,23 +1265,7 @@ impl Cigar{
 	    mine + inserts//.saturating_sub(deletions)
 	}
 
-	/// converts a CigarEnum vector into a Cigar string and stores that internally.
-	/// This function also updated the contains vector.
-	pub fn reset_fom_path(&mut self, path: &[CigarTuple] ){
 
-		self.cigar.clear();
-
-		// boost and compact again:
-		//let corrected = Self::finalize( path );
-		self.state_changes = path.len();
-
-	    for tuple in path {
-	    	
-	        self.cigar.push_str(&tuple.to_string());
-	        self.contains[tuple.option.to_id()] = true;
-	        
-	    }
-	}
 
 /*
 	fn populate_contains( &mut self, cigar: &[CigarEnum] ) {

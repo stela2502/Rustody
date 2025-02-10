@@ -2,6 +2,7 @@
 
 #[cfg(test)]
 mod tests {
+	use std::env;
 
 	use rustody::analysis::AnalysisGeneMapper;
 	use rustody::mapping_info::MappingInfo;
@@ -46,6 +47,11 @@ mod tests {
 
 	#[test]
 	fn chrM_over_the_edge( ){
+        if env::var("RustodyFiles").is_err() {
+            // Skipping test manually by using a conditional inside the test
+            println!("Skipping test due to RustodyFiles not being set.");
+            return;
+        }		
 		let seq = b"AGCTTTAAGGAGCATACTTTACAAGGAT";
 		let specie = "mouse".to_string();
 		let exp="10x";
@@ -58,6 +64,11 @@ mod tests {
 
 	#[test]
 	fn chrM_cellid_problem( ){
+		if env::var("RustodyFiles").is_err() {
+            // Skipping test manually by using a conditional inside the test
+            println!("Skipping test due to RustodyFiles not being set.");
+            return;
+        }
 		let seq = b"GCTTGTTGTTACTTGCCGGAAATCGTAC";
 		let specie = "mouse".to_string();
 		let exp="10x";

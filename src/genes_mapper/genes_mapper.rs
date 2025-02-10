@@ -549,7 +549,7 @@ impl GenesMapper{
 					println!("the alignement:\n{}",nwa.to_string( &read, &database, self.highest_humming_val ));
 				}
 
-				if	nwa.cigar.mapping_quality() > 35 && nwa.cigar.state_changes() < 15 {
+				if	nwa.cigar.is_decent(){
 
 					#[cfg(debug_assertions)]
 					if self.debug{
@@ -612,11 +612,15 @@ impl GenesMapper{
 					//self.get( &read_data, &res_vec, cellid, nwa)
 				}			
 			},
-			Err(_) => {
+			Err(val) => {
 				#[cfg(debug_assertions)]
-				println!("No best mapper identified!");
-				if crappy_mappings { Err(MappingError::OnlyCrap)} else { Err(MappingError::NoMatch) }
-				//self.get( &read_data, &res_vec, cellid, nwa)
+				println!("No best mapper identified! multimatch OR NONE? {val}");
+				if val.gene_id() != 0 && val.db_length() != 0 {
+					// this is not a default and therefore there were multiple best matches and this is a ranom one of them
+					Err(MappingError::MultiMatch)
+				}else {
+					Err(MappingError::NoMatch)
+				}
 			}, //that is kind of OK
 		};
 		if self.debug {

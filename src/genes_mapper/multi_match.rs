@@ -98,12 +98,24 @@ impl MultiMatch{
         }
     }
 
-	pub fn get_best( &self, length:usize ) -> Result<MapperResult, &str> {
+	pub fn get_best( &mut self, length:usize ) -> Result<MapperResult, MapperResult > {
 		//println!( "MultiMatch::get_best has been called! {self}");
+		self.data.sort_unstable_by(|a, b| b.cigar().cmp(&a.cigar())); // Sort in place
+
+		// println!("My sorted results - best first?:\n{:?}",self.data);
+	    match self.data.as_slice() {
+	        [best, second, ..] if best.cigar() == second.cigar() => Err(best.clone()), // Tie case
+	        [best, ..] => Ok(best.clone()), // Unique best
+	        _ => Err(MapperResult::default()), // No results case (handle appropriately)
+	    }
+	}
+	/*
+
 		if self.data.len() == 0 {
 			return Err("No Entry" );
 		}
 		if self.data.len() > 1{
+
 			let mut best:MapperResult = MapperResult::default();
 
 			let mut start:Option<MapperResult> = None ;
@@ -291,7 +303,7 @@ impl MultiMatch{
 		else { // we only have one entry
 			Ok(self.data[0].clone())
 		}
-	}
+	}*/
 
 
 }

@@ -203,7 +203,7 @@ impl MappingInfo{
     	*self.reads_log.entry(name.to_string()).or_insert(0) += 1; 
     }
 
-    fn read_types_to_string(&self, names:Vec<&str> ) -> String {
+    pub fn read_types_to_string(&self, names:Vec<&str> ) -> String {
         let mut formatted_entries = String::new();
 
         for name in &names {

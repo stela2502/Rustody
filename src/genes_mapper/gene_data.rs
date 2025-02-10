@@ -97,8 +97,9 @@ impl Iterator for GeneData {
 // Implementing Display trait for SecondSeq
 impl fmt::Display for GeneData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "GeneData name {}/{} on chr {} at position {} with {} entries:\n{}",
-        	self.name, self.unique_name, self.chr, self.start, self.len(), self.as_dna_string() )
+        write!(f, "GeneData name {}/{} on chr {} at position {} (-{}) with {} (+{}) entries:\n{}",
+        	self.name, self.unique_name, self.chr, self.start, self.dropped_start , 
+        	self.len(), self.dropped_end, self.as_dna_string() )
     }
 }
 

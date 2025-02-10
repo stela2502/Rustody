@@ -266,6 +266,8 @@ impl <'a> NeedlemanWunschAffine {
 			// this seams to have been run already?!
 			return;
 		}
+		//println!("I try to store the reads slicing info: {:?}", read.get_dropped_values());
+		(self.cigar.dropped_start, self.cigar.dropped_end) = read.get_dropped_values();
 			
 		let mut path = Vec::<CigarTuple>::with_capacity(i.max(j));	    
 		//let mut rev_id = i.max(j).saturating_sub(1);
@@ -384,6 +386,7 @@ impl <'a> NeedlemanWunschAffine {
 
 		self.cigar.finalize();
 		self.cigar.check_alignment( read, database);
+		//println!("#2 Trying to conserte the sliceing info {:?}",read.get_dropped_values() );
 		( self.cigar.dropped_start, self.cigar.dropped_end ) = read.get_dropped_values();
 		
 		

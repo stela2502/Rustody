@@ -25,7 +25,13 @@ impl MinimalSam {
     		{
     			//let (mine, _other) = cigar.calculate_covered_nucleotides( &cigar.cigar );
     			let mut cig = cigar.clone();
-    			let (sam_str, start) = cig.to_sam_string(read.len())?;
+    			let (sam_str, start) = match cig.to_sam_string(read.len()){
+    				Some(ret) => ret,
+    				None => {
+    					println!("I failed to get a sam string for this cigar: {}, {}", cig, read.len());
+    					return None
+    				}
+    			};
     			(sam_str, start +  gene_id[0].start() )
     		},
     		None=> {
