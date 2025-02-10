@@ -4,9 +4,11 @@ use crate::genes_mapper::Cigar;
 //use crate::genes_mapper::CigarEndFix;
 //use crate::genes_mapper::gene_data::GeneData;
 
+use std::cmp::Ordering;
+
 use core::fmt;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone )]
 pub struct MapperResult{
 	gene_id: usize,
 	start: usize,
@@ -45,6 +47,34 @@ impl Default for MapperResult {
             edit_dist: 100.0,
             gene_name: String::default(),
             db_length: 0,
+        }
+    }
+}
+
+
+impl PartialEq for MapperResult {
+    fn eq(&self, other: &Self) -> bool {
+        self.cigar == other.cigar && self.gene_name == other.gene_name
+    }
+}
+
+impl Eq for MapperResult {}
+
+impl PartialOrd for MapperResult {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other)) // Delegate to `Ord`
+    }
+}
+
+/// this will automaticall take care of the same cigar, but attached _int in the gene names.
+impl Ord for MapperResult {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.cigar.cmp(&other.cigar) {
+            Ordering::Equal => {        
+                // Otherwise, use cigar comparison 
+                self.gene_name.cmp(&other.gene_name)// Compare gene_name if cigars are equal
+            },
+            other => other,
         }
     }
 }

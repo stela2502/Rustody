@@ -8,6 +8,14 @@ pub struct GeneLink {
 	data: Vec<(usize, usize)>,
 }
 
+impl Default for GeneLink {
+    fn default() -> Self {
+    	Self{
+    		data: Vec::new(),  
+    	} 
+    }
+}
+
 impl GeneLink{
 	pub fn new()->Self {
 		Self{

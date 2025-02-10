@@ -381,10 +381,11 @@ impl AnalysisGenomicMapper{
 		                        }
 		                        
 		                        match minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq, &self.genes ) {
-		                        	Some(sam_line) => bam.push( sam_line ),
-		                        	None => {
+		                        	Ok(sam_line) => bam.push( sam_line ),
+		                        	Err(e) => {
+		                        		report.report(&format!("Sam error: {e}") );
 		                        		// likely a really really crappy mapping anyhow - so just ignore that
-		                        		// eprintln!("There has been an error in the build_sam_record() function - please check what went wrong with this sequence data:\n{}\nand this the cell sequence:\n{}\n",&data[i].1, &data[i].0 );
+		                        		// eprintln!("There has been an error in the minimal_sam.to_sam_line function - please check what went wrong with this sequence:\n{}.",&data[i].1 );
 		                        	}
 		                        }
 		                    },
@@ -734,6 +735,8 @@ impl AnalysisGenomicMapper{
 	    let reads_samples = self.gex.n_reads( samples_idx , &self.sample_names );
 
 	    println!( "{}",results.summary( reads_genes, 0,  reads_samples) );
+
+	    println!( "{}",results.report_to_string());
 
 	    let file_path2 = format!("{}/SampleCounts.tsv", outpath );
 	    println!( "\nCell->Sample table written to {file_path2:?}\n" );

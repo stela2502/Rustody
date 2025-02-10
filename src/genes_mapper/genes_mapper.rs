@@ -35,6 +35,10 @@ use flate2::Compression;
 use std::io::BufWriter;
 use std::io::Write;
 
+use rayon::ThreadPoolBuilder;
+use rayon::iter::IntoParallelRefMutIterator;
+use rayon::iter::ParallelIterator;
+
 //use std::process::exit;
 
 use core::fmt;
@@ -94,6 +98,25 @@ impl GenesMapper{
 			debug:false,
 			small_entries: false,
 		}
+	}
+
+	/// filters all mapper entries that link to more than max_links gene entries
+	pub fn filter(&mut self, max_links:usize, n_core: usize ){
+
+		// Create a thread pool with a fixed number of threads (e.g., 4)
+	    let pool = ThreadPoolBuilder::new()
+	        .num_threads(n_core)  // Set the number of threads you want
+	        .build()
+	        .unwrap();
+
+	    pool.install(|| {
+	        self.mapper.par_iter_mut().for_each(|gene| {
+	            if gene.len() > max_links {
+	                *gene = GeneLink::default();
+	            }
+	        });
+	    });
+
 	}
 
 	pub fn len(&self) -> usize {
@@ -364,50 +387,7 @@ impl GenesMapper{
 			}
 		}	
 	}
-	/*/// Slice the read and database to get the likely matching regions from both.
-    fn slice_objects(
-        &self,
-        min_start: i32,
-        read: &GeneData,
-        database: &GeneData,
-    ) -> Option<(GeneData, GeneData)> {
-        let abs_start = min_start.abs() as usize;
 
-        // Determine which object to slice first based on min_start
-        let (primary, secondary) = if min_start < 0 {
-            (database, read)
-        } else {
-            (read, database)
-        };
-
-        // Compute slice range for primary object
-        if primary.len() < abs_start {
-        	return None;
-        }
-        #[cfg(debug_assertions)]
-        println!("primary.slice({abs_start}, {})",(primary.len() - abs_start).min(secondary.len()) );
-
-        let primary_sliced = primary.slice(abs_start, (primary.len() - abs_start).min(secondary.len())  )?;
-        
-        // Compute slice range for secondary object (matching length)
-        let secondary_sliced = secondary.slice(0, primary_sliced.len().min(primary_sliced.len()))?;
-
-        #[cfg(debug_assertions)]
-        {
-            println!(
-                "GenesMapper::slice_objects - Slicing with start={}",
-                min_start
-            );
-            println!("primary_sliced  : {:?}", primary_sliced.as_dna_string());
-            println!("secondary_sliced: {:?}", secondary_sliced.as_dna_string());
-        }
-		if min_start < 0{
-			Some((secondary_sliced, primary_sliced))
-		}else {
-			Some((primary_sliced, secondary_sliced))
-		}
-        
-    }*/
 
 	/// purge single 16bp fragments that link to more than max_links different positions.
 	pub fn purge(&mut self, max_links:usize ) {
@@ -716,29 +696,6 @@ impl GenesMapper{
 		println!("{self}");
 	}
 
-	/*
-	fn change_start_id ( &mut self, new_start :usize ){
-		if self.offset == 0 {
-            self.offset = new_start;
-        }else {
-            panic!("You try to change the start id twice - not supported!");
-        }
-	}
-	fn to_header_n( &self, names: &[String] ) -> std::string::String{
-		let mut ret= Vec::<std::string::String>::with_capacity( self.genes.len() +4 );
-        //println!( "I get try to push into a {} sized vector", self.names.len());
-        for obj in &self.genes {
-            //println!( "Pushing {} -> {}", obj, *id-1);
-            ret.push(  obj.get_name().to_string() ) ;
-        }
-        ret.push("Most likely name".to_string());
-        ret.push("Faction total".to_string());
-        ret.push("dist to nr.2 [%max]".to_string());
-        "CellID\t".to_owned()+&ret.join("\t")
-	}
-	fn max_id( &self ) -> usize { // return the max:id for the sparse export of the data
-		self.genes.len()
-	}*/
 	pub fn write_index( &mut self, path: &str ) -> Result< (), String>{
 		// this index needs to store the genes vectors and names. Genes binary and names as comma separated list?
 		// Serialize the vector to binary

@@ -13,7 +13,7 @@ impl MinimalSam {
 		Self{}
 	}
 
-	pub fn to_sam_line (&self, read:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec, index:&GenesMapper ) -> Option<String>{
+	pub fn to_sam_line (&self, read:&SeqRec, gene_id:&Vec<MapperResult>, cell_id:&SeqRec, umi:&SeqRec, index:&GenesMapper ) -> Result<String, String >{
 
 		let read2 = read.clone();
 		let mut bam_flag = BamFlag::default();
@@ -28,14 +28,13 @@ impl MinimalSam {
     			let (sam_str, start) = match cig.to_sam_string(read.len()){
     				Some(ret) => ret,
     				None => {
-    					println!("I failed to get a sam string for this cigar: {}, {}", cig, read.len());
-    					return None
+    					return Err(format!("I failed to get a sam string for this cigar: {}, {}", cig, read.len()))
     				}
     			};
     			(sam_str, start +  gene_id[0].start() )
     		},
     		None=> {
-    			panic!("An alignement needs to always have a cigar attached!")
+    			return Err("An alignement needs to always have a cigar attached!".to_owned() )
     		},
     	};
 
@@ -63,7 +62,7 @@ impl MinimalSam {
 		 		gene_data.get_unique_name()
 		 	},
 		 	None => {
-		 		return None
+		 		return Err(format!("My gene {} is not in the database!", gene_id[0].gene_id()) )
 		 	}
 		};
 		record += &format!("{}\t", gene_name ); // needs to be the transcript id!
@@ -183,7 +182,7 @@ impl MinimalSam {
 	    record += &format!("RG:Z:{}", "Sample4:0:1:HN2CKBGX9:1"); // RG:Z:Sample4:0:1:HN2CKBGX9:1
 	    #[cfg(debug_assertions)]
 	    println!("the bam line is this:\n{record}");
-	    Some(record)
+	    Ok(record)
 	}
 
 }
