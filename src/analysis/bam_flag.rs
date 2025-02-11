@@ -33,6 +33,24 @@ impl BamFlag {
         flag
     }
 
+    /// simple way to check the deffernet values like flag.is("paired")
+    pub fn is(&self, tag: &str) -> bool {
+        match tag {
+            "paired" => self.paired,
+            "proper_pair" => self.proper_pair,
+            "unmapped" => self.unmapped,
+            "mate_unmapped" => self.mate_unmapped,
+            "reverse_strand" => self.reverse_strand,
+            "mate_reverse_strand" => self.mate_reverse_strand,
+            "read1" => self.read1,
+            "read2" => self.read2,
+            "secondary" => self.secondary,
+            "qc_fail" => self.qc_fail,
+            "duplicate" => self.duplicate,
+            _ => false, // Return false for unknown tags
+        }
+    }
+
     /// Set a specific flag
     pub fn set_paired(&mut self, value: bool) {
         self.paired = value;
