@@ -1,6 +1,6 @@
 
 
-#[derive(Debug, Default)]
+#[derive(Debug )]
 pub struct BamFlag {
     pub paired: bool,              // 0x1
     pub proper_pair: bool,         // 0x2
@@ -34,6 +34,25 @@ impl Default for BamFlag {
 }
 
 impl BamFlag {
+
+    /// create a flag based on its numeric value
+    pub fn new(flag: u16) -> Self {
+        Self {
+            paired: flag & 0x1 != 0,
+            proper_pair: flag & 0x2 != 0,
+            unmapped: flag & 0x4 != 0,
+            mate_unmapped: flag & 0x8 != 0,
+            reverse_strand: flag & 0x10 != 0,
+            mate_reverse_strand: flag & 0x20 != 0,
+            read1: flag & 0x40 != 0,
+            read2: flag & 0x80 != 0,
+            secondary: flag & 0x100 != 0,
+            qc_fail: flag & 0x200 != 0,
+            duplicate: flag & 0x400 != 0,
+        }
+    }    
+
+
     /// Convert the boolean flags into the corresponding SAM flag integer
     pub fn to_sam(&self) -> u16 {
         let mut flag = 0;
@@ -102,27 +121,6 @@ impl BamFlag {
     }
     pub fn set_duplicate(&mut self, value: bool)  {
         self.duplicate = value;
-    }
-
-    pub fn new( flag: u16) -> Self {
-        let mut ret = Self::default();
-        ret.set( flag );
-        ret
-    }
-
-    /// Set a flag based on its numeric value
-    pub fn set(&mut self, flag: u16) {
-        if flag & 0x1 != 0 { self.paired = true; }
-        if flag & 0x2 != 0 { self.proper_pair = true; }
-        if flag & 0x4 != 0 { self.unmapped = true; }
-        if flag & 0x8 != 0 { self.mate_unmapped = true; }
-        if flag & 0x10 != 0 { self.reverse_strand = true; }
-        if flag & 0x20 != 0 { self.mate_reverse_strand = true; }
-        if flag & 0x40 != 0 { self.read1 = true; }
-        if flag & 0x80 != 0 { self.read2 = true; }
-        if flag & 0x100 != 0 { self.secondary = true; }
-        if flag & 0x200 != 0 { self.qc_fail = true; }
-        if flag & 0x400 != 0 { self.duplicate = true; }
     }
 
 }
