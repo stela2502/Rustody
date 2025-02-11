@@ -1,6 +1,6 @@
 
 
-#[derive(Debug )]
+#[derive(Debug, Clone )]
 pub struct BamFlag {
     pub paired: bool,              // 0x1
     pub proper_pair: bool,         // 0x2
