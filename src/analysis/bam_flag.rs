@@ -15,6 +15,24 @@ pub struct BamFlag {
     pub duplicate: bool,           // 0x400
 }
 
+impl Default for BamFlag {
+    fn default() -> Self {
+        Self {
+            paired: false,
+            proper_pair: false,
+            unmapped: false,
+            mate_unmapped: false,
+            reverse_strand: false,
+            mate_reverse_strand: false,
+            read1: false,
+            read2: false,
+            secondary: false,
+            qc_fail: false,
+            duplicate: false,
+        }
+    }
+}
+
 impl BamFlag {
     /// Convert the boolean flags into the corresponding SAM flag integer
     pub fn to_sam(&self) -> u16 {
@@ -84,6 +102,12 @@ impl BamFlag {
     }
     pub fn set_duplicate(&mut self, value: bool)  {
         self.duplicate = value;
+    }
+
+    pub fn new( flag: u16) -> Self {
+        let mut ret = Self::default();
+        ret.set( flag );
+        ret
     }
 
     /// Set a flag based on its numeric value
