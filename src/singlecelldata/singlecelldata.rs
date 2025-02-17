@@ -105,7 +105,7 @@ impl SingleCellData{
     }
 
     pub fn is_empty(&self) -> bool{
-        self.keys().is_empty()
+        self.data.is_empty()
     }
 
     pub fn len(&self) -> usize {

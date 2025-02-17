@@ -12,7 +12,7 @@ mod tests {
 
     	match index.get_strict( seq, 1, nwa) {
             Ok(matched) => {
-                //panic!("I got this result: {}", matched[0]);
+                //println!("I got this result: {}", matched[0]);
                 match gname {
                 	Some(gname) => {
                 		assert!(true, "Matched sequence found");
@@ -21,7 +21,7 @@ mod tests {
                             Some(name) => {
                                 match index.get_gene( matched[0].gene_id() ){
                                     Some(gene_data) => {
-                                        assert_eq!(gene_data.get_unique_name(), name, "The transcript name did not match the expectations {}", String::from_utf8_lossy(seq) );
+                                        assert_eq!(gene_data.get_unique_name(), name, "The transcript name did not match the expectations {:?} - {}", gname, String::from_utf8_lossy(seq) );
                                     },
                                     None => {
                                         assert!(false, "The expected gene_data object could not be found")
@@ -42,7 +42,7 @@ mod tests {
             Err(e) => {
             	match gname {
                 	Some(gname) => {
-                		println!("I got an unexpected error: {:?} as I had expected to find {gname}", e);
+                		println!("I got an unexpected error: {:?} as I had expected to find {gname} for the sequence {}", e, String::from_utf8_lossy(seq));
                 		assert!(false, "An unexpected error occurred");
                 	},
                 	None => {
@@ -69,7 +69,7 @@ mod tests {
             "-o", outpath,
             "-f", "testData/KI270728.1.fa.gz",
             "--genename", "gene_id",
-            "--transcript", "transcript_id",
+            "--transcript", "gene_id",
         ];
 
         if let Ok(metadata) = fs::metadata(outpath) {
@@ -104,7 +104,7 @@ mod tests {
         	Err(e) => panic!("The index could not be loaded! {e}"),
         };
 
-        assert_eq!(index.len(), 13, "In total 14 genes/transcripts were indexed");
+        assert_eq!(index.len(), 11, "In total 14 genes/transcripts were indexed");
 
         let mut nwa = NeedlemanWunschAffine::new();
 
@@ -112,7 +112,7 @@ mod tests {
         // matches to both of them - I can not check for the transcript name as it is a randoim process which one gets reported - they are both equal at this test
         check_sequence(&index, b"GCCAGGTGGTCCTTACCATGACCAACATGGACCCTGTGGACACAGCCACGTATTACTGT", Some("ENSG00000278510"), None, &mut nwa );
         // matches to only ENST00020619806 (artificially created!!)
-		check_sequence(&index, b"ATGCCTCCTGTACAAGAACCCAGGCTGCGTCTCAGTGGTGCTCCCTCCCTACCTCTGCAGAACAGGAAAGT", Some("ENSG00000278510"),  Some("ENST00020619806"), &mut nwa );
+		check_sequence(&index, b"ATGCCTCCTGTACAAGAACCCAGGCTGCGTCTCAGTGGTGCTCCCTCCCTACCTCTGCAGAACAGGAAAGT", Some("ENSG00000278510"),  Some("ENSG00000278510"), &mut nwa );
 
 
         // Now the transcript in the opposite direction

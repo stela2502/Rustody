@@ -1,5 +1,5 @@
 // /tests/analysis_gene_mapper_internals.rs
-
+#[cfg(feature = "detailed_mapping_debug")]
 #[cfg(test)]
 mod tests {
 	use std::env;

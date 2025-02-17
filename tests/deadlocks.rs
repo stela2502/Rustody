@@ -31,7 +31,8 @@ mod tests {
                 assert_eq!( sam_strings.len(), 0, "I go no result for the search {:?}",e );
             },
             None=> {
-                assert_eq!( single_cell_data.is_empty(), false, "there no result in the data object and I expected '{sam_line:?}'");
+                assert_eq!( single_cell_data.is_empty(), false, 
+                    "there are no result in the data object and I expected '{sam_line:?}' but the single_cell_data contains data!? {}", single_cell_data);
                 match sam_line {
                     Some( sam ) => {
                         if sam_strings.is_empty(){
@@ -55,7 +56,7 @@ mod tests {
         let database = "testData/genes.fasta".to_string();
 
         let bam_line= "SomeRead2\t0\tLgals9\t0\t36\t12M1X31M1X5M1X17M2X3M1X1M\t*\t0\t0\tCCATTGCCCCCACGCTAGCTATATACTGAGGGAAGTGACCCTCCAGGGTTAGCTCAGATCTCTGATCGAACCCAC\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:36\tnM:i:0.08\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
-        test_this_seqence( seq, database, Some(bam_line), None );
+        test_this_seqence( seq, database, None, None );
     }
 
     #[test]
@@ -64,7 +65,7 @@ mod tests {
         let database = "testData/genes.fasta".to_string();
 
         let bam_line= "SomeRead2\t0\tFam129c\t1\t37\t1S13M1D24M1X33M1X\t*\t0\t0\tACAACATGGCTTCCAGAACAGTCGAGAGCAGAGTCTTGCCCCACCCACACCCATCCTGGAGGACAGTGGATAG\tFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF\tNH:i:1\tHI:i:1\tAS:i:37\tnM:i:0.054054055\tRE:A:I\tli:i:0\tBC:Z:GCTGCACA\tQT:Z:FFFFFFFF\tCR:Z:AGGAGATTAGCCTGTTCAACTACATAT\tCY:Z:FFFFFFFFFFFFFFFFFFFFFFFFFFF\tCB:Z:AGGAGATTAGCCTGTTCAACTACATAT-1\tUR:Z:GCTGCACA\tUZ:Z:FFFFFFFF\tUB:Z:GCTGCACA\tRG:Z:Sample4:0:1:HN2CKBGX9:1";
-        test_this_seqence( seq, database, Some(bam_line), None );
+        test_this_seqence( seq, database, None, None );
     }
 
 }

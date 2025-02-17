@@ -119,7 +119,7 @@ fn process_lines ( gtf: &str, re_gene_name: &Regex,
             continue;
         }
 
-        if parts[2] == "transcript"{
+        if parts[2] == "gene"{
             // capture the parts I need using my regexp modules
             if let Some(captures) = re_gene_name.captures( &parts[8].to_string() ){
                 gene_name = captures.get(1).unwrap().as_str().to_string();

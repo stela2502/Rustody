@@ -593,8 +593,8 @@ impl GenesMapper{
 				}			
 			},
 			Err(val) => {
-				#[cfg(debug_assertions)]
-				println!("No best mapper identified! multimatch OR NONE? {val}");
+				#[cfg(all(debug_assertions, feature="detailed_mapping_debug" ))]
+				println!("No best mapper identified! multimatch OR NONE? {val} \n And I got that from this object:\n{} ",helper);
 				if val.gene_id() != 0 && val.db_length() != 0 {
 					// this is not a default and therefore there were multiple best matches and this is a ranom one of them
 					Err(MappingError::MultiMatch)

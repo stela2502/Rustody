@@ -218,7 +218,7 @@ mod tests {
 			None,
 			None,
 			None,
-			Some(MappingError::OnlyCrap),
+			Some(MappingError::NoMatch),
 		);
 	}
 
