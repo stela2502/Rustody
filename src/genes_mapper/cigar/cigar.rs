@@ -206,7 +206,7 @@ impl Cigar{
     fn str_to_tuple_vec( &self, cig:&str, state_changes:usize, only_gaps:bool ) -> Vec<CigarTuple> {
 
 		let re = CigarEnum::get_regex(); // Example CIGAR regex
-		let mut cigar_tuples = Vec::with_capacity( state_changes );
+		let mut cigar_tuples = Vec::with_capacity( 20 );
 		let mut vec_pos = 0;
 		let mut str_pos = 0;
 		let mut read_pos = 0;
