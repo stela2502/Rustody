@@ -223,16 +223,16 @@ mod tests {
 
 	#[test]
 	fn test_cigar_on_database_regions() {
-		let obj1 = Cigar::new("27M2001N64M");
+		let obj1 = Cigar::new("");
 
 		assert_eq!( 
-			obj1.read_on_database_matching_positions( 1, false ), 
+			obj1.read_on_database_matching_positions("27M2001N64M", 1, false ), 
 			vec![ (1, 28), (28+2001, 28+2001+64) ]  , 
 			"Getting two tuples for a spliced read without the intron"
 		);
 
 		assert_eq!( 
-			obj1.read_on_database_matching_positions( 1, true ), 
+			obj1.read_on_database_matching_positions("27M2001N64M", 1, true ), 
 			vec![ (1, 28+2001+64) ]  , 
 			"Getting one tuples for a spliced read with the intron"
 		);
