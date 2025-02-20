@@ -173,6 +173,29 @@ impl Cigar{
 		}
     }
 
+    /// Needed for the bam2bed tools
+    /// Calculates the covered nucleotides.
+    pub fn read_on_database_matching_positions( &self, start: usize ) -> Vec<(usize, usize)> {
+    	let mut start = start;
+    	let mut end = start;
+    	let mut ret = Vec::<(usize, usize)>::new();
+
+		for tupel in self.to_cigar_tupel_vec( false) {
+			if tupel.option.adds_to_database( false ) {
+				end += self.len();
+			}else {
+				ret.push( (start.clone(), end.clone() ) );
+				start = end + self.len();
+				end = start;
+			}
+		}
+
+		if end != start {
+			ret.push( ( start, end ) );
+		}
+		ret
+    }
+
 
     /// splits the cigar string into CigarTuples. They are a representation of the (\d+)([MIDX]),
     /// but also store their position in both the Vec<CigarEnum> and the cigar.cigar string.
@@ -1181,49 +1204,22 @@ impl Cigar{
 
 	/// calculates the nucleotides on both mine and the other sequence that has passed at the end of the cigar string
 	pub fn calculate_covered_nucleotides(&self, cigar_string: &str) -> (usize, usize) {
-	    let mut mine = 0;
-	    let mut other = 0;
-	    let mut current_number = String::new();
-	    let mut inserts = 0;
-	    let mut deletions = 0;
-	    
-	    for c in cigar_string.chars() {
-	        if c.is_digit(10) {
-	            // If the character is a digit, append it to the current number
-	            current_number.push(c);
-	        } else {
-	            // If the character is not a digit, process the operation
-	            let count = current_number.parse::<usize>().unwrap_or(1); // Parse the count, default to 1 if parsing fails
 
-	            match c {
-	                'M' | '=' | 'X' => {
-	                	mine  += count; // Match, mismatch, or sequence match
-	                	other += count; 
-	                },
-	                'I' => {
-	                	inserts += count;
-	                	//mine += count; // Insertion
-	                },
-	                'D' => {
-	                	deletions += count;
-	                	//other += count;// Deletion or intron
-	                },
-	                'S' => {
-	                	mine += count;// Deletion or intron
-	                },
-	                'H' => {
-	                	mine += count;// hard klipped
-	                },
-	                'N' => {
-	                	other += count; //that is the way STAR annotates introns.
-	                }
-	                _ => {}, // Other CIGAR operations (e.g., P)
-	            }
-	            current_number.clear(); // Clear the current number for the next operation
-	        }
-	    }   
-	    mine = mine + inserts;//.saturating_sub(deletions);
-	    other = other + deletions;//.saturating_sub(inserts) ;
+		let mut mine = 0;
+	    let mut other = 0;
+
+		for tupel in self.str_to_tuple_vec( cigar_string, self.state_changes, false ) {
+			if tupel.option.adds_to_read( true ) {
+				println!("add {} to mine", tupel);
+				mine += tupel.len();
+			}
+
+			if tupel.option.adds_to_database( true ) {
+				println!("add {} to other", tupel);
+				other += tupel.len();
+			}
+		}
+	    
 	    (mine, other)
 	}
 

@@ -22,6 +22,33 @@ impl CigarEnum{
 	pub fn opposite(&self, other: &Self ) ->bool {
 		other == &self.get_opposite()
 	}
+
+	/// Does this Cigar add to the databse length? 
+	/// This can be used to calculate the length of the cigars in the end.
+	pub fn adds_to_database(&self, report_n: bool ) -> bool {
+		match &self{
+			CigarEnum::Match => true,
+			CigarEnum::Mismatch => true,
+			CigarEnum::Insertion => false,
+			CigarEnum::Deletion => true,
+			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
+			CigarEnum::Hardclip => false,
+			CigarEnum::Softclip => true,
+			CigarEnum::Nothing => report_n,
+		}
+	}
+
+	/// Does this Cigar add to the read length? 
+	/// This can be used to calculate the length of the cigars in the end
+	pub fn adds_to_read(&self, report_n: bool ) -> bool {
+		match &self{
+			CigarEnum::Insertion => true,
+			CigarEnum::Deletion => false,
+			CigarEnum::Nothing => false,
+			_ => self.adds_to_database( report_n )
+		}
+	}
+
 	pub fn get_opposite(&self) -> Self {
 		match &self{
 			CigarEnum::Match => CigarEnum::Mismatch,
