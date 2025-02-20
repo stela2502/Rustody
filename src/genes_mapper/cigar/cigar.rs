@@ -197,45 +197,45 @@ impl Cigar{
     }
 
 
+    pub fn to_cigar_tupel_vec(&self,only_gaps: bool ) -> Vec<CigarTuple> {
+    	self.str_to_tuple_vec( &self.cigar, only_gaps )
+    }
+
     /// splits the cigar string into CigarTuples. They are a representation of the (\d+)([MIDX]),
     /// but also store their position in both the Vec<CigarEnum> and the cigar.cigar string.
-	pub fn to_cigar_tupel_vec( &self, only_gaps:bool ) -> Vec<CigarTuple> {
-		self.str_to_tuple_vec( &self.cigar, self.state_changes, only_gaps)
-	}
+	pub fn str_to_tuple_vec(&self, cig: &str, only_gaps: bool) -> Vec<CigarTuple> {
+	    let re = CigarEnum::get_regex(); // Regex for CIGAR parsing
+	    let estimated_size = cig.chars().filter(|c| !c.is_digit(10)).count();
+	    let mut cigar_tuples = Vec::with_capacity( estimated_size ); // Avoid reallocations
 
-    fn str_to_tuple_vec( &self, cig:&str, state_changes:usize, only_gaps:bool ) -> Vec<CigarTuple> {
+	    let mut vec_pos = 0;
+	    let mut str_pos = 0;
+	    let mut read_pos = 0;
+	    let mut database_pos = 0;
 
-		let re = CigarEnum::get_regex(); // Example CIGAR regex
-		let mut cigar_tuples = Vec::with_capacity( 20 );
-		let mut vec_pos = 0;
-		let mut str_pos = 0;
-		let mut read_pos = 0;
-		let mut database_pos = 0;
+	    for cap in re.captures_iter(cig) {
+	        let length = unsafe { cap[1].as_bytes().iter().fold(0usize, |acc, &b| acc * 10 + (b - b'0') as usize) };
+	        let cigar_tuple = CigarTuple::from_match(&cap, vec_pos, str_pos, read_pos, database_pos);
 
-	    // Iterate through matches of the regular expression
-	    for cap in re.captures_iter( cig ) {
+	        vec_pos += cigar_tuple.vec_len;
+	        str_pos += cigar_tuple.str_len;
 
-			let length: usize = cap[1].parse().unwrap();
-            let cigar_tuple = CigarTuple::from_match( &cap, vec_pos, str_pos, read_pos, database_pos );
+	        match cigar_tuple.option {
+	            CigarEnum::Insertion => read_pos += length,
+	            CigarEnum::Deletion | CigarEnum::Nothing => database_pos += length,
+	            _ => {
+	                read_pos += length;
+	                database_pos += length;
+	            }
+	        }
 
-            //cigar_tuple.print_debug();
-            vec_pos += cigar_tuple.vec_len;
-            str_pos += cigar_tuple.str_len;
-            if cigar_tuple.option == CigarEnum::Insertion{
-            	read_pos += length;
-            }else if cigar_tuple.option == CigarEnum::Deletion {
-            	database_pos += length;
-            }else{
-            	read_pos += length;
-            	database_pos += length;
-            }
-            // store the value if we need it
-            if  only_gaps && cigar_tuple.option.is_gap()  {
-                cigar_tuples.push(cigar_tuple);
-            }else if ! only_gaps{
-            	cigar_tuples.push(cigar_tuple);
-            }
+	        cigar_tuples.push(cigar_tuple);
 	    }
+
+	    if only_gaps {
+	        cigar_tuples.retain(|t| t.option.is_gap());
+	    }
+
 	    cigar_tuples
 	}
 
@@ -1208,7 +1208,7 @@ impl Cigar{
 		let mut mine = 0;
 	    let mut other = 0;
 
-		for tupel in self.str_to_tuple_vec( cigar_string, self.state_changes, false ) {
+		for tupel in self.str_to_tuple_vec( cigar_string, false ) {
 			if tupel.option.adds_to_read( true ) {
 				println!("add {} to mine", tupel);
 				mine += tupel.len();
