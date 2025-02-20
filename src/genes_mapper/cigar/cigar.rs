@@ -1214,12 +1214,12 @@ impl Cigar{
 
 		for tupel in self.str_to_tuple_vec( cigar_string, false ) {
 			if tupel.option.adds_to_read( true ) {
-				println!("add {} to mine", tupel);
+				//println!("add {} to mine", tupel);
 				mine += tupel.len();
 			}
 
 			if tupel.option.adds_to_database( true ) {
-				println!("add {} to other", tupel);
+				//println!("add {} to other", tupel);
 				other += tupel.len();
 			}
 		}
