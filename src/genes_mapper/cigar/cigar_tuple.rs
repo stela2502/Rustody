@@ -27,13 +27,11 @@ pub struct CigarTuple {
 
 impl CigarTuple {
     /// Creates a CigarTuple from a regex capture group.
-    pub fn from_match(cap: &regex::Captures, start_on_vec: usize, start_in_str: usize, read_position: usize, database_position:usize ) -> Self {
+    pub fn from_match(operation: &str, num_str: &str, start_on_vec: usize, start_in_str: usize, read_position: usize, database_position:usize ) -> Option<Self> {
         // Capture the length and operation from the capture groups
-        let length_str = &cap[1];  // The first capture is the length
-        let operation = &cap[2];   // The second capture is the operation type
 
         // Parse the length from the captured string
-        let length: usize = length_str.parse().unwrap();
+        let length: usize = num_str.parse::<usize>().ok()?;
 
         // Convert the operation string to a CigarEnum
         let cigar_type = CigarEnum::from_str(operation).unwrap_or_else(|| {
@@ -44,15 +42,15 @@ impl CigarTuple {
         });
 
         // Return a new CigarTuple with the parsed data
-        Self {
+        Some(Self {
             vec_pos: start_on_vec,
             str_pos: start_in_str,
             vec_len: length,
-            str_len: cap.len(),
+            str_len: num_str.len(),
             read_position,
             database_position,
             option: cigar_type,
-        }
+        })
     }
 
     pub fn from_scratch( cigar:CigarEnum, length:usize ) ->Self {

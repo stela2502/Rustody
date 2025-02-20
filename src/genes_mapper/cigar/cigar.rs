@@ -204,36 +204,40 @@ impl Cigar{
     /// splits the cigar string into CigarTuples. They are a representation of the (\d+)([MIDX]),
     /// but also store their position in both the Vec<CigarEnum> and the cigar.cigar string.
 	pub fn str_to_tuple_vec(&self, cig: &str, only_gaps: bool) -> Vec<CigarTuple> {
-	    let re = CigarEnum::get_regex(); // Regex for CIGAR parsing
+
 	    let estimated_size = cig.chars().filter(|c| !c.is_digit(10)).count();
+	    let mut vec_pos = 0;
+    	let mut str_pos = 0;
+    	let mut read_pos = 0;
+    	let mut database_pos = 0;
+
 	    let mut cigar_tuples = Vec::with_capacity( estimated_size ); // Avoid reallocations
 
-	    let mut vec_pos = 0;
-	    let mut str_pos = 0;
-	    let mut read_pos = 0;
-	    let mut database_pos = 0;
+    	let mut chars = cig.chars().peekable();
+    	let mut num_str = String::new();
 
-	    for cap in re.captures_iter(cig) {
-	        let length = unsafe { cap[1].as_bytes().iter().fold(0usize, |acc, &b| acc * 10 + (b - b'0') as usize) };
-	        let cigar_tuple = CigarTuple::from_match(&cap, vec_pos, str_pos, read_pos, database_pos);
+		while let Some(c) = chars.next() {
+			if c.is_ascii_digit() {
+	            num_str.push(c);
+	        } else {
+	        	if let Some(cigar_tuple) = CigarTuple::from_match( &c.to_string(), &num_str, vec_pos, str_pos, read_pos, database_pos){
+	        		
+	        		vec_pos += cigar_tuple.vec_len;
+                	str_pos += cigar_tuple.str_len;
 
-	        vec_pos += cigar_tuple.vec_len;
-	        str_pos += cigar_tuple.str_len;
+					match cigar_tuple.option {
+	                    CigarEnum::Insertion => read_pos += cigar_tuple.vec_len,
+	                    CigarEnum::Deletion | CigarEnum::Nothing => database_pos += cigar_tuple.vec_len,
+	                    _ => {
+	                        read_pos += cigar_tuple.vec_len;
+	                        database_pos += cigar_tuple.vec_len;
+	                    }
+	                }
 
-	        match cigar_tuple.option {
-	            CigarEnum::Insertion => read_pos += length,
-	            CigarEnum::Deletion | CigarEnum::Nothing => database_pos += length,
-	            _ => {
-	                read_pos += length;
-	                database_pos += length;
+	                cigar_tuples.push(cigar_tuple);
 	            }
+	            num_str.clear(); // Reset for next number
 	        }
-
-	        cigar_tuples.push(cigar_tuple);
-	    }
-
-	    if only_gaps {
-	        cigar_tuples.retain(|t| t.option.is_gap());
 	    }
 
 	    cigar_tuples
