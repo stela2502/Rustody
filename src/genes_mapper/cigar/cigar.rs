@@ -174,18 +174,18 @@ impl Cigar{
     }
 
     /// Needed for the bam2bed tools
-    /// Calculates the covered nucleotides.
-    pub fn read_on_database_matching_positions( &self, start: usize ) -> Vec<(usize, usize)> {
-    	let mut start = start;
+    /// Calculates the covered nucleotides including the start position and allowing for either including the N (with_n=true) or excluding it (false).
+    pub fn read_on_database_matching_positions( &self, st: i32, with_n:bool ) -> Vec<(usize, usize)> {
+    	let mut start = st as usize;
     	let mut end = start;
     	let mut ret = Vec::<(usize, usize)>::new();
 
-		for tupel in self.to_cigar_tupel_vec( false) {
-			if tupel.option.adds_to_database( false ) {
-				end += self.len();
+		for tupel in self.to_cigar_tupel_vec( false ) {
+			if tupel.option.adds_to_database( with_n ) {
+				end += tupel.len();
 			}else {
 				ret.push( (start.clone(), end.clone() ) );
-				start = end + self.len();
+				start = end + tupel.len();
 				end = start;
 			}
 		}

@@ -221,6 +221,24 @@ mod tests {
 		assert_eq!( obj1.calculate_covered_nucleotides ("27M2001N64M"), ( 27 + 64, 27 +64 + 2001 ), "N is counted as other" );
 	}
 
+	#[test]
+	fn test_cigar_on_database_regions() {
+		let obj1 = Cigar::new("27M2001N64M");
+
+		assert_eq!( 
+			obj1.read_on_database_matching_positions( 1, false ), 
+			vec![ (1, 28), (28+2001, 28+2001+64) ]  , 
+			"Getting two tuples for a spliced read without the intron"
+		);
+
+		assert_eq!( 
+			obj1.read_on_database_matching_positions( 1, true ), 
+			vec![ (1, 28+2001+64) ]  , 
+			"Getting one tuples for a spliced read with the intron"
+		);
+
+	}
+
 	
 
 
