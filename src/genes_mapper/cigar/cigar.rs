@@ -1214,6 +1214,9 @@ impl Cigar{
 	                'H' => {
 	                	mine += count;// hard klipped
 	                },
+	                'N' => {
+	                	other += count; //that is the way STAR annotates introns.
+	                }
 	                _ => {}, // Other CIGAR operations (e.g., P)
 	            }
 	            current_number.clear(); // Clear the current number for the next operation

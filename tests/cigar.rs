@@ -214,6 +214,13 @@ mod tests {
 		assert!( obj1.better_as(&obj2), "#3 \n{obj1:?}\nis better than \n{obj2:?} ({})", obj1.better_as(&obj2) );
 	}
 
+
+	#[test]
+	fn test_cigar_length_with_n() {
+		let obj1 = Cigar::new("");
+		assert_eq!( obj1.calculate_covered_nucleotides ("27M2001N64M"), ( 27 + 64, 27 +64 + 2001 ), "N is counted as other" );
+	}
+
 	
 
 
