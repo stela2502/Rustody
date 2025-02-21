@@ -3,7 +3,6 @@ use crate::genes_mapper::MapperResult;
 
 //use rand::Rng;
 
-use regex::Regex;
 use core::fmt;
 
 pub struct MultiMatch{

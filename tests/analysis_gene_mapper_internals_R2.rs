@@ -27,11 +27,11 @@ mod tests {
 	    let (single_cell_data, sam_strings) = worker.analyze_paralel( &data, &mut results, pos );
 	    match err{
 	    	Some(e) => {
-	    		assert_eq!( single_cell_data.is_empty(), true, "no results in the data object");
+	    		assert_eq!( single_cell_data.len() == 0 , true, "we got an matching error, but there is data in the matrix?! {}",single_cell_data.len() );
 	    		assert_eq!( sam_strings.len(), 0, "I go no result for the search: {:?}", e );
 	    	},
 	    	None=> {
-	    		assert_eq!( single_cell_data.is_empty(), false, "there no result in the data object and I expected '{sam_line:?}'");
+	    		assert_eq!( single_cell_data.len() == 0, false, "there no result in the data object and I expected '{sam_line:?}'");
 	    		match sam_line {
 	    			Some( sam ) => {
 	    				if sam_strings.is_empty(){

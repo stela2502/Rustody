@@ -111,19 +111,18 @@ impl Cigar{
 	/// This function also updated the contains vector.
 	pub fn reset_fom_path(&mut self, path: &[CigarTuple] ){
 
-		self.cigar.clear();
-
-		// boost and compact again:
-		//let corrected = Self::finalize( path );
-		self.state_changes = path.len();
+		self.clear();
 
 	    for tuple in path {
+	    	if tuple.len() == 0{
+	    		continue;
+	    	}
+	    	self.state_changes +=1;
 	        self.cigar.push_str(&tuple.to_string());
 	        self.contains[tuple.option.to_id()] = true;
-	        if tuple.len() > self.max_match{
-				self.max_match = tuple.len();
-			}
+	        self.max_match = self.max_match.max( tuple.len());
 	    }
+
 	}
 
 	pub fn is_decent ( &self ) -> bool {
@@ -150,8 +149,8 @@ impl Cigar{
 		self.fixed = None;
 		self.contains.fill(false);
 		self.state_changes = 0;
-		//self.dropped_start = 0;
-		//self.dropped_end = 0;
+		self.dropped_start = 0;
+		self.dropped_end = 0;
 	}
 
 	fn max3<T: Ord>(a: T, b: T, c: T) -> T {
@@ -332,23 +331,19 @@ impl Cigar{
 
     	if &self.cigar == ""{
     		return 0
-    	}
-    	let re = Regex::new(r"(\d+)(\w)").unwrap();
-    
+    	}    
 	    // Initialize counts for 'M' and other operations
 	    let mut m_count = 0;
 	    let mut other_count = 0;
 	    
 	    // Iterate through matches of the regular expression
-	    for cap in re.captures_iter(&self.cigar) {
-	        let count: usize = cap[1].parse().unwrap();
-	        let operation = &cap[2];
-	        match operation {
-	            "M" => m_count += count,
+	    for cap in self.to_cigar_tupel_vec(false) {
+	        match cap.option {
+	            CigarEnum::Match => m_count += cap.len(),
 	            //"S" => (),// soft clipped is ignored here
 	            //"H" => (),// hard clipped is ignored here
-	            "N" => (),// not matched (intron) is ignored, too
-	            _ => other_count += count,
+	            CigarEnum::Nothing => (),// not matched (intron) is ignored, too
+	            _ => other_count += cap.len(),
 	        }
 	    }
 	    if other_count == 0 {
@@ -361,36 +356,30 @@ impl Cigar{
     }
 
     pub fn edit_distance(&self ) -> f32 {
-    	let re = Regex::new(r"(\d+)(\w)").unwrap();
     
 	    // Initialize counts for 'M' and other operations
 	    let mut other_count = 0.0;
 	    let mut total = 0.0;	    
 	    // Iterate through matches of the regular expression
-	    for cap in re.captures_iter(&self.cigar) {
-	        let count: f32 = cap[1].parse().unwrap();
-	        total += count;
-	        let operation = &cap[2];
-	        match operation {
-	            "M" => (), // match
+	    for cap in self.to_cigar_tupel_vec(false) {
+	        total += cap.len() as f32;
+	        match cap.option {
+	            CigarEnum::Match => (), // match
 	            //"S" => total -= count,// soft clipped is igniored here
 	            //"H" => total -= count,// hard clipped is igniored here
-	            "N" => total -= count,// not matched (intron) also ignored
-	            "=" => (), // not quite sure, but should likely be good too - or?
-	            _ => other_count += count,
+	            CigarEnum::Nothing => total -= cap.len() as f32,// not matched (intron) also ignored
+	            _ => other_count += cap.len() as f32,
 	        }
 	    }
 	    other_count  / total
     }
 
     pub fn mapped(&self) -> f32{
-    	let re = Regex::new(r"(\d+)(\w)").unwrap();
     	let mut total = 0.0;
-    	for cap in re.captures_iter(&self.cigar) {
-    		let count: f32 = cap[1].parse().unwrap();
-    		match &cap[2]{
-    			"M" => total += count,
-    			_ => (),//only count MATCH
+    	for cap in self.to_cigar_tupel_vec(false) {
+    		//let count: f32 = cap.len() as f32;
+    		if cap.option == CigarEnum::Match {
+    			total += cap.len() as f32;
     		}
     	}
     	total
@@ -545,60 +534,20 @@ impl Cigar{
     	self.soft_clip_start_end();
     	let mut ret = self.cigar.to_string();
 
-		/*let re_start = Regex::new(r"^(\d+)([ID])").unwrap();
-
-		let move_start = if let Some(mat) =re_start.captures(&ret) {
-			let clippable = mat.get(1).unwrap();
-			let length : usize= mat.get(1).unwrap().as_str().parse().unwrap();
-			let option = mat.get(2).unwrap().as_str();
-			match option{
-				"I" => {
-					// crap - this will be a negative change for the read location!
-					ret.replace_range(clippable.start()..clippable.end()+1, &format!("{}S", length) );
-					0
-				},
-				"D" => {
-					// move the match n bp instead!
-					ret.replace_range(clippable.start()..clippable.end()+1, "" );
-					length
-				},
-				_ => unreachable!()
-			}
-		}else {
-			0
-		};
-
-		let re_end = Regex::new(r"(\d+)([DI])$").unwrap();
-		if let Some(mat) =re_end.captures(&ret) {
-			let clippable = mat.get(1).unwrap();
-			let length : i64= mat.get(1).unwrap().as_str().parse().unwrap();
-			let option = mat.get(2).unwrap().as_str();
-
-			match option{
-				"I" => {
-					ret.replace_range(clippable.start()..clippable.end()+1, &format!("{}S", length) );
-				},
-				"D" => {
-					// that can just go.
-					ret.replace_range(clippable.start()..clippable.end()+1, "" );
-				},
-				_ => unreachable!()
-			}
-		}*/
-
 		// and now we need to handle the possibiliity that the mapper has cut parts of our string, too.
 		if self.dropped_start > 0 {
-			ret = format!("{}H{}", self.dropped_start, ret);
+			ret = format!("{}S{}", self.dropped_start, ret);
 		}
 		if self.dropped_end > 0 {
-			ret += &format!("{}H", self.dropped_end);
+			ret += &format!("{}S", self.dropped_end);
 		}
 
 		// todo("If the start Clips would change the positions?")
 		let (mine, _other) = self.calculate_covered_nucleotides( &ret );
 		if mine != length {
 			// likely a really really crappy mapping anyhow - so just ignore that
-		    // eprintln!("The cigar does not have the correct length {}! {}", length, ret );
+			#[cfg(all(debug_assertions, feature = "mapping_debug"))]
+		    println!("The cigar does not have the correct length {} ({})! {}", length, mine, ret );
 			return None
 		}
 		return Some( (ret, 0 ) )
@@ -1114,92 +1063,73 @@ impl Cigar{
     		//println!("Do not run soft_clip_start_end twice! {:?}", self.fixed );
     		return;
     	}
-    	let start = r"^((?:[1-7]M|[1-9][0-9]*[IXD]){4,})";
-    	//let start = r"^((?:[123456789][IXMD]){5,})";
-    	let re_start = regex::Regex::new(start).unwrap();
 
-		let end = r"((?:[1-7]M|[1-9][0-9]*[IXD]){4,})$";
-    	//let end = r"((?:[123456789][IXMD]){5,})$";
-    	let re_end = regex::Regex::new(end).unwrap();
+    	let mut crap_on_start = 0;
+    	let mut crap_on_end = 0;
+    	//println!("my cigar: {}", self.cigar);
 
-    	let old_cigar = &self.cigar.clone();
-		self.fixed = Some(CigarEndFix::Na);
+    	let mut vec = self.to_cigar_tupel_vec( false );
+    	// check how much crap is on the start of the cigar
+    	for tupel in &vec {
+    		if (tupel.option == CigarEnum::Match && tupel.len() > 7 ) 
+    			|| tupel.len() > 10 {
+    			break;
+    		}
+    		//println!("Found a crappy entry on start {tupel} at {crap_on_start}");
+    		crap_on_start+=1;
+    	}
+    	// check how much crap is on the end of the cigar
+    	for tupel in vec.iter().rev() {
+    		if (tupel.option == CigarEnum::Match && tupel.len() > 7 ) 
+    			|| tupel.len() > 10 {
+    			break;
+    		}
+    		//println!("Found a crappy entry on end {tupel} at {crap_on_end}");
+    		crap_on_end+=1;
+    	}
+    	let mut fixed: Option<CigarEndFix> = Some(CigarEndFix::Na);
+    	// get rid of start crap if it is more than 4 entries
+    	if crap_on_start > 4 {
+    		crap_on_start -= 1;
+    		let mut convert = 0;
+    		for id in 0..(crap_on_start) {
+    			if vec[id].option.adds_to_read(true){
+    				convert += vec[id].vec_len;
+    			}
+				vec[id].vec_len = 0;
+    		}
+    		vec[crap_on_start].vec_len += convert;
+    		vec[crap_on_start].option = CigarEnum::Mismatch;
+    		//println!("last changed entry: {} at {}", vec[crap_on_start-1],crap_on_start-1 );
+    		fixed = Some(CigarEndFix::Start);
+    	}
 
-		//println!("Just while debugging: the 'old cigar' = {old_cigar} and self = {self}");
+    	// get rid of end crap if it is more than 4 entries
+    	if crap_on_end > 4 {
+    		crap_on_end -= 1;
+    		//println!(" crap_on_end: {crap_on_end}" );
+    		let mut convert = 0;
+    		let len = vec.len()-1;
+    		for id in 0..crap_on_end {
+    			//println!("Self {} pos {} ({} - {})to 0 - total {}", vec[len-id], len-id, len, id, convert+ vec[len-id].vec_len );
+    			if vec[len-id].option.adds_to_read(true){
+    				convert += vec[len-id].vec_len;
+    			}
+				vec[len-id].vec_len = 0;
+    		}
+    		vec[len - crap_on_end ].vec_len += convert;
+    		vec[len - crap_on_end ].option = CigarEnum::Mismatch;
+    		//println!("last changed entry: {} at {}", vec[len -crap_on_end], len - crap_on_end );
+    		if crap_on_start > 4 {
+    			fixed = Some(CigarEndFix::Both)
+    		}else {
+    			fixed = Some(CigarEndFix::End)
+    		}
 
-	    if let Some(mat) = re_end.captures(&old_cigar) {
-	        if let Some(clippable) = mat.get(1) {
-	        	if clippable.start() > 0{
-	        		let prev_char:&char = &self.cigar[(clippable.start()-1)..clippable.start()].chars().next().unwrap();
-				    if prev_char.is_digit(10) {
-				        // The character is a digit - overmatched
-				        let clipped_part = &self.cigar[(clippable.start()+2)..clippable.end()];
+    	}
 
-						#[cfg(debug_assertions)]	        
-				        let (mine, _other) = self.calculate_covered_nucleotides(clipped_part);
-				        #[cfg(not(debug_assertions))]
-				        let (mine, _other) = self.calculate_covered_nucleotides(clipped_part);
-
-				        self.cigar.replace_range((clippable.start()+2)..clippable.end(), &format!("{}X", mine));
-				        self.fixed = Some(CigarEndFix::End);
-				    } else {
-				        // The character is not a digit - great
-				        let clipped_part = &self.cigar[clippable.start()..clippable.end()];
-		        		let (mine, _) = self.calculate_covered_nucleotides(clipped_part);
-		        		//println!("I'll clip this part: {clipped_part} with a mine length of {mine}");
-		            	self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}X", mine));
-		            	self.fixed = Some(CigarEndFix::End);
-				    }
-					
-				}else {
-			        // The character is not a digit - great
-			        let clipped_part = &self.cigar[clippable.start()..clippable.end()];
-			        let (mine, _) = self.calculate_covered_nucleotides(clipped_part);
-			        //println!("not an digit - I'll clip this part: {clipped_part} with a mine length of {mine}");
-			        self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}X", mine));
-			        self.fixed = Some(CigarEndFix::End);
-			    }
-			    
-	        }
-	    }
-		#[cfg(debug_assertions)]
-		println!("Updated cigar after end clipping: {self}");
-
-	    let problem = r"^\d\d*S$";
-		let re_problem = regex::Regex::new(problem).unwrap();
-
-	   	if let Some(_mat) = re_problem.captures(&self.cigar.clone()) {
-	   		//panic!("This should not happen in the tests!");
-	   		self.state_changes = 1;
-	   		return;
-	   	}
-	    
-	    if let Some(mat) = re_start.captures(&old_cigar) {
-	        if let Some(clippable) = mat.get(1) {
-	            if clippable.start() <= clippable.end() && clippable.end() <= self.cigar.len() {
-	        		let clipped_part = &self.cigar[clippable.start()..clippable.end()];
-	        		let (mine, _) = self.calculate_covered_nucleotides(clipped_part);
-	            	self.cigar.replace_range(clippable.start()..clippable.end(), &format!("{}X", mine));
-	            	match self.fixed{
-	            		Some(CigarEndFix::End) => self.fixed = Some( CigarEndFix::Both),
-	            		Some(CigarEndFix::Na) => self.fixed =Some( CigarEndFix::Start),
-	            		_ => unreachable!() ,
-	            	}
-	            	
-	        	}else {
-	        		// This can be totally normal for really really crappy matches.
-	        		eprintln!("With {self} I found a crappy match {} {}: {} old: {}", clippable.start(), clippable.end(), self.cigar.len(), old_cigar);
-	        	}
-	            
-	        }
-	    }
-	    #[cfg(debug_assertions)]
-	    println!("Updated cigar after start clipping: {self}");
-
-	    self.state_changes = self.cigar.chars().filter(|c| !c.is_digit(10)).count();
-
-	    /*println!("This is the final cigar inside function: {self}");
-	    println!("And more specifically the fixed field: {:?}", self.fixed);*/
+    	self.reset_fom_path( &vec );
+    	self.fixed = fixed;
 
     }
 

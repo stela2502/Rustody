@@ -386,6 +386,7 @@ impl <'a> NeedlemanWunschAffine {
 
 		self.cigar.finalize();
 		self.cigar.check_alignment( read, database);
+		//self.cigar.soft_clip_start_end();
 		//println!("#2 Trying to conserte the sliceing info {:?}",read.get_dropped_values() );
 		( self.cigar.dropped_start, self.cigar.dropped_end ) = read.get_dropped_values();
 		

@@ -33,7 +33,7 @@ impl CigarEnum{
 			CigarEnum::Deletion => true,
 			CigarEnum::Empty => panic!("You can not compare CigarEnum::Empty to anything"),
 			CigarEnum::Hardclip => false,
-			CigarEnum::Softclip => true,
+			CigarEnum::Softclip => false,
 			CigarEnum::Nothing => report_n,
 		}
 	}
@@ -45,6 +45,7 @@ impl CigarEnum{
 			CigarEnum::Insertion => true,
 			CigarEnum::Deletion => false,
 			CigarEnum::Nothing => false,
+			CigarEnum::Softclip => true,
 			_ => self.adds_to_database( report_n )
 		}
 	}

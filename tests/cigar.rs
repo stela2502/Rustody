@@ -84,6 +84,26 @@ mod tests {
 	}
 
 	#[test]
+	fn test_soft_start_short(){
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("1X1M2X1I2X65M");
+		obj.soft_clip_start_end( );
+		println!("This is the obtained cigar: {obj}");
+		assert_eq!( obj.cigar, "7X65M");
+		assert_eq!( obj.fixed, Some(CigarEndFix::Start), "start fixed");
+	}
+
+	#[test]
+	fn test_soft_end_short(){
+		let mut obj = Cigar::default();
+		obj.restart_from_cigar("65M1X1M2X1I2X");
+		obj.soft_clip_start_end( );
+		println!("This is the obtained cigar: {obj}");
+		assert_eq!( obj.cigar, "65M7X");
+		assert_eq!( obj.fixed, Some(CigarEndFix::End), "start fixed");
+	}
+
+	#[test]
 	fn test_soft_start(){
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M");
@@ -123,6 +143,7 @@ mod tests {
 		let mut obj = Cigar::default();
 		obj.restart_from_cigar("1X1M2X1I2X1M1X1M1X1I2M1X1M1X1M1X2M1X2D2X65M1X1M2X1M1X1M1X1M1X1I2X1I2X1I1M1D3X1M1X1D1X2M2D2X1M1I");
 		obj.soft_clip_start_end();
+		assert_eq!( obj.cigar, "24X65M30X");
 		assert_eq!( obj.mapping_quality(), 21 );
 	}
 	#[test]

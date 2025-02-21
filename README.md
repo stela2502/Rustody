@@ -14,6 +14,11 @@ You can inspect the state of the program using this [deatiled comparison between
 
 ## News
 
+### 2.2.5
+
+Rewritten Cigra functions ditching Regexp as that adds WAY too much overhad to the functions!
+Significant speed improvements!
+
 ### 2.2.4
 
 The mapping process is still kind of slow, the sam output looks promising.

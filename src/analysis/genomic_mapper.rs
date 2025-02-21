@@ -382,10 +382,10 @@ impl AnalysisGenomicMapper{
 		                        
 		                        match minimal_sam.to_sam_line( &data[i].1, gene_id, cell_seq, umi_seq, &self.genes ) {
 		                        	Ok(sam_line) => bam.push( sam_line ),
-		                        	Err(e) => {
-		                        		report.report(&format!("Sam error: {e}") );
+		                        	Err(_e) => {
+		                        		report.report(&format!("Bad Cigar") );
 		                        		// likely a really really crappy mapping anyhow - so just ignore that
-		                        		// eprintln!("There has been an error in the minimal_sam.to_sam_line function - please check what went wrong with this sequence:\n{}.",&data[i].1 );
+		                        		// println!("There has been an error in the minimal_sam.to_sam_line function - please check what went wrong with this sequence:\n{}.",&data[i].1 );
 		                        	}
 		                        }
 		                    },

@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use crate::gene::Gene;
 
-use regex::Regex;
 
 /// This gene family represents exactly that. Multiple gene entries that we want as much info on as possible.
 /// We are looking for gene specific mappers, family specific mappers and possibly also something in between 
@@ -47,8 +46,6 @@ impl GeneFamily{
 	pub fn index( &self, index:&mut FastMapper, max_area:usize, seq_records:&HashMap<String, Vec<u8>> ) {
 		let mut max_area_loc = max_area;
 
-		let chr = Regex::new(r"^chr").unwrap();
-
 		for gene in &self.family{
 			if max_area == 0{
 				max_area_loc = gene.end - gene.start;
@@ -61,7 +58,7 @@ impl GeneFamily{
 	                //println!("The genes detected: {:?}", index.names_store );
 	            },
 	            None => {
-	                if chr.is_match ( &gene.chrom.to_string() ){
+	                if gene.chrom.starts_with("chr") {
 	                    match seq_records.get( &gene.chrom.to_string()[3..] ){
 	                        Some(seq) => {
 	                            gene.add_to_index( seq, index, max_area_loc, false );
