@@ -360,6 +360,7 @@ impl IntToStr {
     	ret
 	}
 
+
     /// needed for the secundary mappings
     /// takes the UTF8 encoded sequence and encodes the first kmer_len into a u64 
     pub fn into_u64_nbp(&self, kmer_size:usize ) -> u64{
@@ -462,6 +463,50 @@ impl IntToStr {
 		self.storage = self.long_term_storage.to_vec();
 		self.regenerate()
 	}
+
+	/// speed the regeneration up:
+	pub fn regenerate_from_slice(&mut self, input: &[u8]) -> Result<(), String> {
+	    let mut padded_len = input.len();
+	    let remainder = padded_len % 4;
+	    if remainder != 0 {
+	        padded_len += 4 - remainder;
+	    }
+
+	    let mut ret = Vec::with_capacity(padded_len / 4);
+
+	    for chunk_start in (0..padded_len).step_by(4) {
+	        let mut value: u8 = 0;
+
+	        for i in 0..4 {
+	            let idx = chunk_start + i;
+	            let base = if idx < input.len() {
+	                input[idx]
+	            } else {
+	                b'A' // pad with 'A' if out-of-bounds
+	            };
+	            value <<= 2;
+	            value |= self.encode_binary(base)?;
+	        }
+
+	        ret.push(value);
+	    }
+
+	    self.u8_encoded = ret;
+	    self.lost = 0;
+	    self.shifted = 0;
+	    Ok(())
+	}
+
+	pub fn regenerate_from_str(&mut self, input: &str) -> Result<(), String> {
+	    self.regenerate_from_slice(input.as_bytes())
+	}
+
+	/// simply get the the first 16 bp as u32
+	pub fn str_to_u32( &mut self, input:&str ) -> u32 {
+		self.regenerate_from_slice(input.as_bytes());
+		self.into_u32()
+	}
+
 
 	/// regenerate the encoded from the storage
 	/// this can be used to re-gain lost sequences
