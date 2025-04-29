@@ -390,13 +390,15 @@ impl SingleCellData{
 
         let gene_ids = genes.ids_for_gene_names( &self.genes_to_print );
 
+        let i2s = IntToStr::new(b"AAAA".to_vec(), 32).unwrap();
+
         for cell_obj in self.values() {
             if ! cell_obj.passing {
                 continue;
             }
             cell_id += 1;
 
-            match writeln!( writer_b, "Cell{}",cell_obj.name ){
+            match writeln!( writer_b, i2s.u64_to_string( 32, &cell_obj.name) ){
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}");
