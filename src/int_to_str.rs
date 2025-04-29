@@ -10,7 +10,7 @@ pub const C: Base = 1;
 pub const G: Base = 2;
 pub const T: Base = 3;
 
-#[derive(Debug,PartialEq)]
+#[derive(Default,Debug,PartialEq)]
 pub struct IntToStr {
 	long_term_storage: Vec::<u8>, //this will never be shifted nor poped
 	storage: Vec::<u8>,  // the initial utf8 encoded data
@@ -509,7 +509,7 @@ impl IntToStr {
 	    let array = km.to_le_bytes();
 	    let mut data: String = "".to_string();
 
-	    self.u8_array_to_str( kmer_size, array.to_vec(), &mut data);
+	    self.u8_array_to_str( kmer_size, &array, &mut data);
 	    data
 	}
 
@@ -520,13 +520,13 @@ impl IntToStr {
 
 	    let array = km.to_le_bytes();
 
-	    self.u8_array_to_str( kmer_size, array.to_vec(), data)
+	    self.u8_array_to_str( kmer_size, &array, data)
 	}
 	pub fn u16_to_str ( &self, kmer_size:usize, km:&u16,  data:&mut String ){
 
 	    let array = km.to_le_bytes();
 
-	    self.u8_array_to_str( kmer_size, array.to_vec(), data)
+	    self.u8_array_to_str( kmer_size, &array, data)
 	}
 
 
@@ -569,11 +569,11 @@ impl IntToStr {
 		//println!("\nMakes sense? {:?}", data);
 	}
 
-	pub fn u8_array_to_str ( &self, kmer_size:usize, u8_rep:Vec::<u8>,  data:&mut String ){
+	pub fn u8_array_to_str ( &self, kmer_size:usize, u8_rep:&[u8],  data:&mut String ){
 
 		let mut i = 0;
 
-		for u8_4bp in &u8_rep {
+		for u8_4bp in u8_rep {
 			i += 4;
 			if i >= kmer_size {
 				//println!("decoding {} bits of this number: {:b}", kmer_size - (i-4), u8_4bp);

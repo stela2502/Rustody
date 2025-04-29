@@ -20,7 +20,7 @@ fn main() {
 
     let mut seq = "".to_string();
 
-    tool.u8_array_to_str( opts.length, opts.int.to_le_bytes().to_vec(), &mut seq );
+    tool.u8_array_to_str( opts.length, &opts.int.to_le_bytes(), &mut seq );
 
     println!( "The sequence is:\n{}\n", seq );
 }

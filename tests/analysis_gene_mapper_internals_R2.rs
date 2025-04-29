@@ -35,7 +35,7 @@ mod tests {
 	    		match sam_line {
 	    			Some( sam ) => {
 	    				if sam_strings.is_empty(){
-			    			panic!("There is no sam tile for this match {}! \n{}",single_cell_data,  results.log_str());
+			    			panic!("There is no sam read for this match {}! \n{}",single_cell_data,  results.log_str());
 			    		}
 			    		assert_eq!(sam_strings[0], sam, "We got the expected sam line? \n{}", results.log_str());
 	    			},

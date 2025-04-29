@@ -241,7 +241,7 @@ mod tests {
      assert_eq!( decoded, "CTGG".to_string() );
 
      decoded.clear();
-     tool.u8_array_to_str( 45,  tool.u8_encoded.clone(),  &mut decoded);
+     tool.u8_array_to_str( 45,  &tool.u8_encoded,  &mut decoded);
      assert_eq!( decoded, "CTGGAAAAGCTGGGCTCCCGGCTGCATTGGGCTGGTCCGTGGGTT".to_string() );
 
      decoded.clear();

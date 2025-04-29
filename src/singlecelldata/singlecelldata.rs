@@ -14,6 +14,7 @@ use crate::singlecelldata::cell_data::GeneUmiHash;
 use crate::singlecelldata::CellData;
 //use crate::cellids::CellIds;
 use crate::singlecelldata::IndexedGenes;
+use crate::int_to_str::IntToStr;
 
 use std::io::BufWriter;
 use std::fs::File;
@@ -277,12 +278,13 @@ impl SingleCellData{
 
         //println!("We are here exporting a samples table and want these samples to be included: {:?}", names );
         //println!("And we have these ids for them: {:?} using the offset", genes.ids_for_gene_names( names) );
+        let i2s = IntToStr::new( b"AAA".to_vec(), 32 ).unwrap();
 
         for cell_obj in self.values() {
             if ! cell_obj.passing{
                 continue;
             }
-            let text = cell_obj.to_str( genes, names );
+            let text = cell_obj.to_str( genes, names, &i2s, 32 );
             //println!("this should contain some info {}", text);
             match writeln!( writer, "{text}" ){
                 Ok(_) => passed +=1,

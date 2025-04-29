@@ -2,6 +2,7 @@ use std::hash::{Hash, Hasher};
 use core::fmt;
 use std::cmp::Ord;
 
+/// GeneUmiHash ( gene_id_usize, UMI_u64 )
 #[derive(Debug, Copy, Clone)]
 pub struct GeneUmiHash( pub usize, pub u64);
 impl PartialEq for GeneUmiHash {

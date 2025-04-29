@@ -11,6 +11,7 @@ use std::hash::Hasher;
 //use crate::geneids::GeneIds;
 use crate::singlecelldata::IndexedGenes;
 use core::fmt;
+use crate::int_to_str::IntToStr;
 
 
 /// CellData here is a storage for the total UMIs. UMIs will be checked per cell
@@ -269,10 +270,10 @@ impl CellData{
         *self.total_reads.get( gene_id ).unwrap_or(&0)
     }
     
-    pub fn to_str(&self, gene_info:&IndexedGenes, names: &Vec<String> ) -> String {
+    pub fn to_str(&self, gene_info:&IndexedGenes, names: &Vec<String>, int_2_str: &IntToStr, length:usize ) -> String {
 
         let mut data = Vec::<std::string::String>::with_capacity( names.len()+4 ); 
-        data.push(format!( "Cell{}", self.name ) );
+        data.push(format!( "{}", int_2_str.u64_to_string( length, &self.name ) ) );
 
         // here our internal data already should be stored with the same ids as the gene names.
         let mut total = 0;
