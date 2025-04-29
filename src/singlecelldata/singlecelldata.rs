@@ -400,7 +400,7 @@ impl SingleCellData{
             cell_id += 1;
 
             i2s.u64_to_str( 32, &cell_obj.name, &mut cell_name); 
-            println!("Cell ID {} became seq {}", &cell_obj.name, &cell_name );
+            //println!("Cell ID {} became seq {}", &cell_obj.name, &cell_name );
             match writeln!( writer_b,"{}", &cell_name){
                 Ok(_) => (),
                 Err(err) => {
