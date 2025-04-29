@@ -398,7 +398,7 @@ impl SingleCellData{
             }
             cell_id += 1;
 
-            match writeln!( writer_b, i2s.u64_to_string( 32,"{}", &cell_obj.name) ){
+            match writeln!( writer_b,"{}", i2s.u64_to_string( 32, &cell_obj.name) ){
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}");
