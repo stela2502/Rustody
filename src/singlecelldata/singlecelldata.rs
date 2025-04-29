@@ -391,6 +391,7 @@ impl SingleCellData{
         let gene_ids = genes.ids_for_gene_names( &self.genes_to_print );
 
         let i2s = IntToStr::new(b"AAAA".to_vec(), 32).unwrap();
+        let mut cell_name = "".to_string();
 
         for cell_obj in self.values() {
             if ! cell_obj.passing {
@@ -398,13 +399,16 @@ impl SingleCellData{
             }
             cell_id += 1;
 
-            match writeln!( writer_b,"{}", i2s.u64_to_string( 32, &cell_obj.name) ){
+            i2s.u64_to_str( 32, &cell_obj.name, &mut cell_name); 
+            println!("Cell ID {} became seq {}", &cell_obj.name, &cell_name );
+            match writeln!( writer_b,"{}", &cell_name){
                 Ok(_) => (),
                 Err(err) => {
                     eprintln!("write error: {err}");
                     return Err( "cell barcode could not be written".to_string())   
                 }
             };
+            cell_name.clear();
 
             for (gene_id, id) in gene_ids.iter().enumerate() {
                 let n = cell_obj.n_umi_4_gene_id( id);
