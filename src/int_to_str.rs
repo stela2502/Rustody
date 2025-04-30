@@ -558,6 +558,7 @@ impl IntToStr {
 	    data
 	}
 
+
 	/// <unsigned_int>_to_str functions do exactly that.
 	/// they regenerate the initial utf8 encoded String from a IntToStr encoded integer.
 	/// u64_to_str - convert a IntToStr encoded u64 to utf8 Vec::<u8> with a length of up to 32bp
