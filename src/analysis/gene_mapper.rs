@@ -735,7 +735,7 @@ impl AnalysisGeneMapper{
 			    for gex in total_results{
 			    	#[cfg(debug_assertions)]
 			    	println!("I merge a SingelCellData object into my own main object:\n{}into:\n{}", &gex.0.0, &self.gex);
-			    	self.gex.merge(gex.0.0);
+			    	self.gex.merge(&gex.0.0);
 			    	for line in gex.0.1{
 
 			    		match writeln!(sam_file_writer, "{}", line){
@@ -798,7 +798,7 @@ impl AnalysisGeneMapper{
 	        report.stop_multi_processor_time();
 
 	        for gex in total_results{
-	        	self.gex.merge(gex.0.0);
+	        	self.gex.merge(&gex.0.0);
 	        	for line in gex.0.1{
 		    		match writeln!(sam_file_writer, "{}", line){
 		        		Ok(_) => (),

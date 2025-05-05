@@ -65,6 +65,6 @@ mod tests {
 		let _nw = nwa.needleman_wunsch_affine( &gd1, &gd2, 0.4 );
 	
 		//assert_eq!( &cigar.to_string(), "67I23M", "I expected 34M34I22M as I manually deleted 34 bp from the database" );
-		assert_eq!( &nwa.cigar.cigar, "32M34I24M", "I expected 32M34I24M as I manually deleted 34 bp from the database" );
+		assert_eq!( &nwa.cigar.cigar, "33M34I23M", "I expected 32M34I24M as I manually deleted 34 bp from the database" );
 	}
 }

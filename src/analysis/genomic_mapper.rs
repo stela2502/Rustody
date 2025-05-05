@@ -612,7 +612,7 @@ impl AnalysisGenomicMapper{
 		        report.stop_multi_processor_time();
 
 			    for gex in total_results{
-			    	self.gex.merge(gex.0.0);
+			    	self.gex.merge(&gex.0.0);
 			    	for line in gex.0.1{
 			    		match writeln!(writer, "{}", line){
 			        		Ok(_) => (),
@@ -666,7 +666,7 @@ impl AnalysisGenomicMapper{
 	        report.stop_multi_processor_time();
 
 	        for gex in total_results{
-	        	self.gex.merge(gex.0.0);
+	        	self.gex.merge(&gex.0.0);
 	        	for line in gex.0.1{
 		    		match writeln!(writer, "{}", line){
 		        		Ok(_) => (),

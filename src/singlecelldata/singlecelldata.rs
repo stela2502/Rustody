@@ -133,9 +133,42 @@ impl SingleCellData{
         }
     }
 
+    pub fn merge(&mut self, other: &SingleCellData) {
+        if other.is_empty() {
+            return;
+        }
+
+        self.checked = false;
+        self.passing = 0;
+        self.genes_with_data.clear();
+
+        // Parallelize over the indices of `self.data`
+        self.data
+        .par_iter_mut()
+        .enumerate()
+        .for_each(|(index, self_bucket)| {
+            // Access the corresponding bucket in `other.data`
+            if let Some(other_bucket) = other.data.get(index) {
+                for (cell_name, other_cell) in other_bucket {
+
+                    match self_bucket.entry(*cell_name) {
+                        std::collections::btree_map::Entry::Occupied(mut entry) => {
+                            // If cell exists, merge with existing cell
+                            let cell = entry.get_mut();
+                            cell.merge(other_cell);
+                        }
+                        std::collections::btree_map::Entry::Vacant(entry) => {
+                            // If cell doesn't exist, insert new cell by copying data from other_cell
+                            entry.insert(other_cell.deep_clone()); // Assumes `CellData` implements `Clone`
+                        }
+                    }
+                }
+            }
+        });
+    }
 
     /// merge two SingleCellData objects - keep track of the umis!
-    pub fn merge(&mut self, mut other: SingleCellData) {
+    pub fn merge_single_thread(&mut self, mut other: SingleCellData) {
         if ! other.is_empty() {
             // Reset all internal measurements
             self.checked = false;

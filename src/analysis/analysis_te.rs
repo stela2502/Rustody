@@ -569,7 +569,7 @@ impl AnalysisTE{
 		        report.stop_multi_processor_time();
 
 			    for gex in total_results{
-			    	self.gex.merge(gex.0);
+			    	self.gex.merge(&gex.0);
 			       	report.merge( &gex.1 );
 			    }
 			    //eprintln!("Collecting more reads");
@@ -616,7 +616,7 @@ impl AnalysisTE{
 	        report.stop_multi_processor_time();
 
 	        for gex in total_results{
-	        	self.gex.merge(gex.0);
+	        	self.gex.merge(&gex.0);
 	        	report.merge( &gex.1 );
 	        }
 	        pb.set_message( report.log_str().clone() );

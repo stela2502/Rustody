@@ -113,28 +113,26 @@ impl CellData{
     }
 
     /// adds the other values into this object
-    pub fn merge(&mut self, other: &mut CellData) {
+    pub fn merge(&mut self, other: &CellData) {
         self.total_umis += other.total_umis;
         let mut too_much = BTreeMap::<usize, usize>::new();
 
-        let other_genes = std::mem::take(&mut other.genes);
-        for (gene_umi_combo, counts) in other_genes {
-            match self.genes.entry(gene_umi_combo) {
+        for (gene_umi_combo, counts) in &other.genes {
+            match self.genes.entry(*gene_umi_combo) {
                 std::collections::btree_map::Entry::Occupied(mut entry) => {
                     *entry.get_mut() += counts;
                     let counter = too_much.entry(gene_umi_combo.0).or_insert(0);
                     *counter += 1;
                 }
                 std::collections::btree_map::Entry::Vacant(entry) => {
-                    entry.insert(counts);
+                    entry.insert(*counts);
                 }
             }
         }
 
-        let other_total_reads = std::mem::take(&mut other.total_reads);
-        for (gene_id, count) in other_total_reads {
-            let double_counts = too_much.get(&gene_id).unwrap_or(&0);
-            let mine = self.total_reads.entry(gene_id).or_insert(0);
+        for (gene_id, count) in &other.total_reads {
+            let double_counts = too_much.get(gene_id).unwrap_or(&0);
+            let mine = self.total_reads.entry(*gene_id).or_insert(0);
             *mine += count - double_counts;
         }
     }
