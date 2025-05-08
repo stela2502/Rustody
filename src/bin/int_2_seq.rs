@@ -1,6 +1,8 @@
 use clap::Parser;
 use rustody::int_to_str::IntToStr;
 
+/// Decodes the max 128 bit wide integer as 2bit DNA string.
+
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Stefan L. <stefan.lang@med.lu.se>")]
 struct Opts {
