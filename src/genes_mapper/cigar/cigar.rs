@@ -179,11 +179,17 @@ impl Cigar{
     	let mut end = start;
     	let mut ret = Vec::<(usize, usize)>::new();
 
+
 		for tupel in self.str_to_tuple_vec( cig, false ) {
 			if tupel.option.adds_to_database( with_n ) {
+				if tupel.option == "S"{
+					start += tupel.len();
+				}
 				end += tupel.len();
 			}else {
-				ret.push( (start.clone(), end.clone() ) );
+				if start != end {
+					ret.push( (start.clone(), end.clone() ) );
+				}
 				start = end + tupel.len();
 				end = start;
 			}

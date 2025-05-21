@@ -258,6 +258,12 @@ mod tests {
 			"Getting one tuples for a spliced read with the intron"
 		);
 
+		assert_eq!( 
+			obj1.read_on_database_matching_positions("2S69M", 1, true ), 
+			vec![ (3, 72) ]  , 
+			"Getting one tuples for a spliced read with the intron"
+		);
+
 	}
 
 	
