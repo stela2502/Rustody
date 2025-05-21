@@ -264,6 +264,13 @@ mod tests {
 			"Getting one tuples for a spliced read with the intron"
 		);
 
+		assert_eq!( 
+			obj1.read_on_database_matching_positions("4S65M2S", 1, true ), 
+			vec![ (5, 70) ]  ,
+			"Getting one tuples for a double S read"
+		);
+
+		//assert_eq!("A", "B","just a test if I ru  this at all");
 	}
 
 	
