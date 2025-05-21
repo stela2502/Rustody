@@ -19,6 +19,11 @@ impl CigarEnum{
 	pub fn is_gap(&self) -> bool {
 		self == &CigarEnum::Deletion || self == &CigarEnum::Insertion
 	}
+
+	pub fn is_clipp(&self) -> bool {
+		self == &CigarEnum::Hardclip || self == &CigarEnum::Softclip
+	}
+
 	pub fn opposite(&self, other: &Self ) ->bool {
 		other == &self.get_opposite()
 	}

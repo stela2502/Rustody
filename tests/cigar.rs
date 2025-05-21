@@ -260,13 +260,13 @@ mod tests {
 
 		assert_eq!( 
 			obj1.read_on_database_matching_positions("2S69M", 1, true ), 
-			vec![ (1+2, 1+2+69-1) ]  , 
+			vec![ (1, 1+69-1) ]  , 
 			"Getting one tuples for a spliced read with the intron"
 		);
 
 		assert_eq!( 
 			obj1.read_on_database_matching_positions("4S65M2S", 1, true ), 
-			vec![ (1+4, 1+4+65-1) ]  ,
+			vec![ (1, 1+65-1) ]  ,
 			"Getting one tuples for a double S read"
 		);
 		assert_eq!( 

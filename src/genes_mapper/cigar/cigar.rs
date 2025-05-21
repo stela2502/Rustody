@@ -173,18 +173,31 @@ impl Cigar{
     }
 
     /// Needed for the bam2bed tools
-    /// Calculates the covered nucleotides including the start position and allowing for either including the N (with_n=true) or excluding it (false).
+    /// Calculates the covered nucleotides including the (Gtf [1 based]) start position and allowing for either including the N (with_n=true) or excluding it (false).
     pub fn read_on_database_matching_positions( &self, cig:&str, st: i32, with_n:bool ) -> Vec<(usize, usize)> {
     	let mut start = st as usize;
     	let mut end = start;
     	let mut ret = Vec::<(usize, usize)>::new();
 
+    	let mut tuple_vec = self.str_to_tuple_vec( cig, false );
 
-		for tupel in self.str_to_tuple_vec( cig, false ) {
+    	// Remove soft-clipping from the start
+		if let Some(first) = tuple_vec.first() {
+		    if first.option.is_clipp()  {
+		        tuple_vec.remove(0); // safe since it's the first element
+		    }
+		}
+
+		// Remove soft-clipping from the end
+		if let Some(last) = tuple_vec.last() {
+		    if last.option.is_clipp() {
+		        tuple_vec.pop(); // removes the last element
+		    }
+		}
+
+
+		for tupel in tuple_vec {
 			if tupel.option.adds_to_database( with_n ) {
-				if tupel.option == "S"{
-					start += tupel.len();
-				}
 				end += tupel.len();
 			}else {
 				if start != end {
