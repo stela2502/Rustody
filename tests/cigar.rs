@@ -248,27 +248,33 @@ mod tests {
 
 		assert_eq!( 
 			obj1.read_on_database_matching_positions("27M2001N64M", 1, false ), 
-			vec![ (1, 28), (28+2001, 28+2001+64) ]  , 
+			vec![ (1, 1+27-1), (1+27+2001, 1+27+2001+64-1) ]  , 
 			"Getting two tuples for a spliced read without the intron"
 		);
 
 		assert_eq!( 
 			obj1.read_on_database_matching_positions("27M2001N64M", 1, true ), 
-			vec![ (1, 28+2001+64) ]  , 
+			vec![ (1, 1+27+2001+64-1) ]  , 
 			"Getting one tuples for a spliced read with the intron"
 		);
 
 		assert_eq!( 
 			obj1.read_on_database_matching_positions("2S69M", 1, true ), 
-			vec![ (3, 72) ]  , 
+			vec![ (1+2, 1+2+69-1) ]  , 
 			"Getting one tuples for a spliced read with the intron"
 		);
 
 		assert_eq!( 
 			obj1.read_on_database_matching_positions("4S65M2S", 1, true ), 
-			vec![ (5, 70) ]  ,
+			vec![ (1+4, 1+4+65-1) ]  ,
 			"Getting one tuples for a double S read"
 		);
+		assert_eq!( 
+			obj1.read_on_database_matching_positions("47M510919N24M", 1, false ), 
+			vec![ (1, 1+47-1), (1+510919+47, 1+510919+47+24-1) ]  ,
+			"Getting one tuples for a Long N read"
+		);
+
 
 		//assert_eq!("A", "B","just a test if I ru  this at all");
 	}
