@@ -53,6 +53,7 @@ pub struct MappingInfo{
     pub error_counts: HashMap<String, usize>,  // To store error types and their counts
     // log should also print (if not likely to tty)
     std_out_is_tty: bool,
+    pub hist:Vec<usize>,
 
 }
 
@@ -94,10 +95,16 @@ impl MappingInfo{
 			reads_log,
 			error_counts: HashMap::new(),  // Initialize the HashMap
 			std_out_is_tty: is(atty::Stream::Stdout) ,
-
+			hist: vec![0; 20],
 		};
 		this.start_counter();
 		this
+	}
+
+	pub fn iterate_hist( &mut self, id: usize) {
+		if id < self.hist.len(){
+			self.hist[id] +=1;
+		}
 	}
 
 	pub fn start_counter ( &mut self ){
@@ -236,6 +243,9 @@ impl MappingInfo{
             // For each error type in `other`, increment the value in `self`
             *self.error_counts.entry(error_type.clone()).or_insert(0) += count;
         }
+        for (a, b) in self.hist.iter_mut().zip(&other.hist) {
+		    *a += *b;
+		}
 	}
 
 

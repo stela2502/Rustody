@@ -201,7 +201,7 @@ impl Cigar{
 				end += tupel.len();
 			}else {
 				if start != end {
-					ret.push( (start, end -1 ) );
+					ret.push( (start, end  ) );
 				}
 				start = end + tupel.len();
 				end = start;
@@ -209,7 +209,7 @@ impl Cigar{
 		}
 
 		if end != start {
-			ret.push( ( start, end -1 ) );
+			ret.push( ( start, end  ) );
 		}
 		ret
     }

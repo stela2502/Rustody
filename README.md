@@ -14,6 +14,11 @@ You can inspect the state of the program using this [deatiled comparison between
 
 ## News
 
+### 2.2.6
+
+The Mapping info can not collect and populate an ``hist:Vec<usize>``.
+Use the iterate_hist( id:usize) to add to this data.
+
 ### 2.2.5
 
 Rewritten Cigra functions ditching Regexp as that adds WAY too much overhad to the functions!
