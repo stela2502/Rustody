@@ -460,6 +460,9 @@ impl SingleCellData{
         println!( "{}",report );
         Ok( report )
     }
+
+
+    
     /// Update the gene names for export to sparse
     /// returns the count of cells and the count of total gene values
     pub fn update_genes_to_print( &mut self, genes:&IndexedGenes, names:&Vec<String>) -> [usize; 2] {
